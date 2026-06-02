@@ -1,6 +1,9 @@
 spring:
   application:
     name: personal_cloud_sync
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
 management:
   endpoints:
     web:
@@ -11,3 +14,6 @@ management:
       show-details: always
 server:
   port: 20000
+logging:
+  level:
+    org.flywaydb: info
