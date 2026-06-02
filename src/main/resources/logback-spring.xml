@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!--Loki2.x syntax -->
+    <springProperty name="appName" source="spring.application.name" defaultValue="myapp"/>
+    <springProperty name="activeProfile" source="spring.profiles.active" defaultValue="default"/>
+
+    <property name="LOG_LEVEL" value="${LOG_LEVEL:-INFO}"/>
+    <property name="LOKI_URL" value="http://localhost:3100/loki/api/v1/push"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%yellow(%d{HH:mm:ss.SSS}) %highlight(%-5level) app=${appName} %logger{36} - %msg %ex{10}%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <springProfile name="dev">
+        <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+
+            <http>
+                <url>${LOKI_URL}</url>
+                <requestTimeoutMs>5000</requestTimeoutMs>
+                <maxRetries>1</maxRetries>
+                <dropRateLimitedBatches>true</dropRateLimitedBatches>
+            </http>
+
+            <labels>
+                app=${appName}
+                profile=${activeProfile}
+                level=%level
+            </labels>
+
+            <message>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg %ex{10}</pattern>
+            </message>
+            <batch>
+                <maxItems>100</maxItems>
+                <maxBytes>262144</maxBytes>
+                <timeoutMs>2000</timeoutMs>
+            </batch>
+
+        </appender>
+    </springProfile>
+
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="com.zaxxer.hikari" level="WARN"/>
+
+    <springProfile name="dev">
+        <root level="${LOG_LEVEL}">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="LOKI"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="!dev">
+        <root level="${LOG_LEVEL}">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+</configuration>
