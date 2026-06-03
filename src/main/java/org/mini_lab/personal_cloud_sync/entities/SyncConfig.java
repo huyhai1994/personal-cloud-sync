@@ -15,7 +15,13 @@ import java.time.OffsetDateTime;
 @Entity
 @Getter
 @Setter
-@Table(name = "sync_config")
+@Table(name = "sync_config",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_sync_config_source_target_path",
+                        columnNames = {"source_path", "target_path"}
+                )
+        })
 public class SyncConfig {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
