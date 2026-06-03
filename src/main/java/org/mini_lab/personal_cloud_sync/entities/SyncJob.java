@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -21,10 +22,12 @@ public class SyncJob {
     @JoinColumn(name = "sync_config_id", referencedColumnName = "id")
     private SyncConfig syncConfig;
 
-    @Enumerated(EnumType.ORDINAL)
-    @Column(name = "final_status")
-    private JobStatus finalStatus;
+    @OneToMany(mappedBy = "syncJob", fetch = FetchType.LAZY)
+    private List<SyncAttempt> syncAttempts;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "final_status", length = 50)
+    private JobStatus finalStatus;
 
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
