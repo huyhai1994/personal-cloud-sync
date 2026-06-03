@@ -126,4 +126,25 @@ class SyncConfigRepositoryTest {
 
     }
 
+    @Test
+    void update_enable_status_should_success() {
+        SyncConfig initialSyncConfig = new SyncConfig();
+        initialSyncConfig.setMountPath("/mnt/test");
+        initialSyncConfig.setSourcePath("/source/test/1");
+        initialSyncConfig.setTargetPath("/target/test/1");
+
+        SyncConfig needUpdatedSyncConfig = syncConfigRepository.saveAndFlush(initialSyncConfig);
+
+        Short id = needUpdatedSyncConfig.getId();
+
+        int updatedSyncConfigStatus = syncConfigRepository.updateEnabledStatus(id, Boolean.FALSE);
+        assertEquals(1, updatedSyncConfigStatus);
+        
+        SyncConfig updatedSyncConfig = syncConfigRepository.findById(id).orElseThrow();
+
+        assertFalse(updatedSyncConfig.getEnabled());
+
+
+    }
+
 }
