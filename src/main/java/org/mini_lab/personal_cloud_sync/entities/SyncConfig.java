@@ -47,6 +47,7 @@ public class SyncConfig {
     @Column(name = "max_retry", columnDefinition = "TINYINT")
     private Byte maxRetry;
 
+    @Enumerated(EnumType.ORDINAL)
     @Column(name = "schedule_type")
     private ScheduleType scheduleType;
 

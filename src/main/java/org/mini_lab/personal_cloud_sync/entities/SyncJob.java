@@ -21,7 +21,7 @@ public class SyncJob {
     @JoinColumn(name = "sync_config_id", referencedColumnName = "id")
     private SyncConfig syncConfig;
 
-
+    @Enumerated(EnumType.ORDINAL)
     @Column(name = "final_status")
     private JobStatus finalStatus;
 
