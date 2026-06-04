@@ -10,6 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -139,12 +140,28 @@ class SyncConfigRepositoryTest {
 
         int updatedSyncConfigStatus = syncConfigRepository.updateEnabledStatus(id, Boolean.FALSE);
         assertEquals(1, updatedSyncConfigStatus);
-        
+
         SyncConfig updatedSyncConfig = syncConfigRepository.findById(id).orElseThrow();
 
         assertFalse(updatedSyncConfig.getEnabled());
 
 
     }
+
+
+    @Test
+    void find_sync_config_by_id() {
+        SyncConfig initialSyncConfig = new SyncConfig();
+        initialSyncConfig.setMountPath("/mnt/test");
+        initialSyncConfig.setSourcePath("/source/test/1");
+        initialSyncConfig.setTargetPath("/target/test/1");
+        initialSyncConfig.setEnabled(Boolean.FALSE);
+
+        SyncConfig needFoundSyncConfig = syncConfigRepository.saveAndFlush(initialSyncConfig);
+        Short id = needFoundSyncConfig.getId();
+        Optional<SyncConfig> foundSyncConfig = syncConfigRepository.findById(id);
+        assertFalse(foundSyncConfig.orElseThrow().getEnabled());
+    }
+
 
 }
