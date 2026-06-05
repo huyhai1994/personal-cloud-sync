@@ -32,4 +32,13 @@ class SyncConfigServiceTest {
         createSyncConfigRequest.setSourcePath("abc");
         assertThrows(InvalidPathException.class, () -> syncConfigService.createSyncConfig(createSyncConfigRequest));
     }
+
+    @Test
+    void source_or_target_path_is_blank_should_throw_exception() {
+        CreateSyncConfigRequest createSyncConfigRequest = new CreateSyncConfigRequest();
+        createSyncConfigRequest.setSourcePath(" ");
+        createSyncConfigRequest.setTargetPath(" ");
+        assertThrows(InvalidPathException.class, () -> syncConfigService.createSyncConfig(createSyncConfigRequest));
+        assertThrows(InvalidPathException.class, () -> syncConfigService.createSyncConfig(createSyncConfigRequest));
+    }
 }

@@ -44,6 +44,11 @@ public class SyncConfigService {
             throw new InvalidPathException("Source Path", "Source Path Should not be null");
         if (PathValidationUtils.isPathNull(targetPath))
             throw new InvalidPathException("target Path", "Target Path Should not be null");
+        if (PathValidationUtils.isPathBlank(sourcePath))
+            throw new InvalidPathException("Source Path", "Source Path Should not be blank");
+        if (PathValidationUtils.isPathBlank(targetPath))
+            throw new InvalidPathException("target Path", "Target Path Should not be blank");
+
         return 0;
     }
 }

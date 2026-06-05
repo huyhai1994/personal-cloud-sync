@@ -32,6 +32,7 @@ public class PathValidationUtils {
     }
 
     public static boolean isPathBlank(String path) {
+        path = path.trim();
         return StringUtils.isEmpty(path);
 
     }
