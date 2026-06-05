@@ -1,6 +1,7 @@
 package org.mini_lab.personal_cloud_sync.services;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
 import org.mini_lab.personal_cloud_sync.exception.LocalPathIsNotDirectory;
 import org.mini_lab.personal_cloud_sync.exception.MaximumRetryCountExceedException;
@@ -8,13 +9,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @ActiveProfiles("dev")
 class SyncConfigServiceTest {
+    @TempDir
+    Path tempDir;
+
 
     @Autowired
     private SyncConfigService syncConfigService;
@@ -44,10 +51,28 @@ class SyncConfigServiceTest {
     }
 
     @Test
-    void local_path_is_not_directory_should_throw_exception() {
+    void local_path_is_not_directory_should_throw_exception() throws IOException {
+        Path sourceFile = Files.createFile(tempDir.resolve("source.txt"));
+
         CreateSyncConfigRequest createSyncConfigRequest = new CreateSyncConfigRequest();
-        createSyncConfigRequest.setSourcePath("/abc/abc");
-        createSyncConfigRequest.setTargetPath("/abc/abc");
-        assertThrows(LocalPathIsNotDirectory.class, () -> syncConfigService.createSyncConfig(createSyncConfigRequest));
+        createSyncConfigRequest.setSourcePath(sourceFile.toString());
+        createSyncConfigRequest.setTargetPath(tempDir.toString());
+
+        assertThrows(LocalPathIsNotDirectory.class, () ->
+                syncConfigService.createSyncConfig(createSyncConfigRequest)
+        );
+    }
+
+    @Test
+    void local_path_is_not_exist_should_throw_exception() {
+        Path notExistPath = tempDir.resolve("not-exist-dir");
+
+        CreateSyncConfigRequest createSyncConfigRequest = new CreateSyncConfigRequest();
+        createSyncConfigRequest.setSourcePath(notExistPath.toString());
+        createSyncConfigRequest.setTargetPath(tempDir.toString());
+
+        assertThrows(InvalidPathException.class, () ->
+                syncConfigService.createSyncConfig(createSyncConfigRequest)
+        );
     }
 }

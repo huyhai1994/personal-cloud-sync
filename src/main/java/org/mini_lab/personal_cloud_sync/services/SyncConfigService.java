@@ -49,6 +49,8 @@ public class SyncConfigService {
             throw new InvalidPathException("Source Path", "Source Path Should not be blank");
         if (PathValidationUtils.isPathBlank(targetPath))
             throw new InvalidPathException("target Path", "Target Path Should not be blank");
+        if (!PathValidationUtils.pathIsExits(sourcePath))
+            throw new InvalidPathException("Source Path", "Local path not exists");
         if (!PathValidationUtils.pathIsDirectory(sourcePath))
             throw new LocalPathIsNotDirectory();
 
