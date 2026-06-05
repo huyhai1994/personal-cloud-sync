@@ -1,4 +1,5 @@
 package org.mini_lab.personal_cloud_sync.services;
+
 import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
 import org.mini_lab.personal_cloud_sync.exception.MaximumRetryCountExceedException;
 import org.mini_lab.personal_cloud_sync.util.PathValidationUtils;
@@ -8,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.InvalidPathException;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,10 +34,16 @@ public class SyncConfigService {
     }
 
     public Short createSyncConfig(CreateSyncConfigRequest request) {
-        byte maximumRetryCount = request.getMaxRetry();
-        if (maximumRetryCount > MAXIMUM_RETRY_LIMIT) throw new MaximumRetryCountExceedException();
+        Byte maximumRetryCount = request.getMaxRetry();
+        String sourcePath = request.getSourcePath();
+        String targetPath = request.getTargetPath();
 
-
+        if (maximumRetryCount != null && maximumRetryCount > MAXIMUM_RETRY_LIMIT)
+            throw new MaximumRetryCountExceedException();
+        if (PathValidationUtils.isPathNull(sourcePath))
+            throw new InvalidPathException("Source Path", "Source Path Should not be null");
+        if (PathValidationUtils.isPathNull(targetPath))
+            throw new InvalidPathException("target Path", "Target Path Should not be null");
         return 0;
     }
 }

@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.nio.file.InvalidPathException;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
@@ -23,4 +25,11 @@ class SyncConfigServiceTest {
         assertThrows(MaximumRetryCountExceedException.class, () -> syncConfigService.createSyncConfig(createSyncConfigRequest));
     }
 
+    @Test
+    void source_or_target_path_is_null_should_throw_exception() {
+        CreateSyncConfigRequest createSyncConfigRequest = new CreateSyncConfigRequest();
+        assertThrows(InvalidPathException.class, () -> syncConfigService.createSyncConfig(createSyncConfigRequest));
+        createSyncConfigRequest.setSourcePath("abc");
+        assertThrows(InvalidPathException.class, () -> syncConfigService.createSyncConfig(createSyncConfigRequest));
+    }
 }
