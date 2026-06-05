@@ -2,6 +2,7 @@ package org.mini_lab.personal_cloud_sync.services;
 
 import org.junit.jupiter.api.Test;
 import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
+import org.mini_lab.personal_cloud_sync.exception.LocalPathIsNotDirectory;
 import org.mini_lab.personal_cloud_sync.exception.MaximumRetryCountExceedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,5 +41,13 @@ class SyncConfigServiceTest {
         createSyncConfigRequest.setTargetPath(" ");
         assertThrows(InvalidPathException.class, () -> syncConfigService.createSyncConfig(createSyncConfigRequest));
         assertThrows(InvalidPathException.class, () -> syncConfigService.createSyncConfig(createSyncConfigRequest));
+    }
+
+    @Test
+    void local_path_is_not_directory_should_throw_exception() {
+        CreateSyncConfigRequest createSyncConfigRequest = new CreateSyncConfigRequest();
+        createSyncConfigRequest.setSourcePath("/abc/abc");
+        createSyncConfigRequest.setTargetPath("/abc/abc");
+        assertThrows(LocalPathIsNotDirectory.class, () -> syncConfigService.createSyncConfig(createSyncConfigRequest));
     }
 }

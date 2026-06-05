@@ -1,6 +1,7 @@
 package org.mini_lab.personal_cloud_sync.services;
 
 import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
+import org.mini_lab.personal_cloud_sync.exception.LocalPathIsNotDirectory;
 import org.mini_lab.personal_cloud_sync.exception.MaximumRetryCountExceedException;
 import org.mini_lab.personal_cloud_sync.util.PathValidationUtils;
 import org.springframework.stereotype.Service;
@@ -48,6 +49,9 @@ public class SyncConfigService {
             throw new InvalidPathException("Source Path", "Source Path Should not be blank");
         if (PathValidationUtils.isPathBlank(targetPath))
             throw new InvalidPathException("target Path", "Target Path Should not be blank");
+        if (!PathValidationUtils.pathIsDirectory(sourcePath))
+            throw new LocalPathIsNotDirectory();
+
 
         return 0;
     }
