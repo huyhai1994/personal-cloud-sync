@@ -1,5 +1,6 @@
 package org.mini_lab.personal_cloud_sync.services;
-
+import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
+import org.mini_lab.personal_cloud_sync.exception.MaximumRetryCountExceedException;
 import org.mini_lab.personal_cloud_sync.util.PathValidationUtils;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +12,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class SyncConfigService {
+
+    public static final int MAXIMUM_RETRY_LIMIT = 5;
 
     public boolean checkMountViaCommand(String mountPoint) throws IOException, InterruptedException {
         String command = System.getProperty("os.name").toLowerCase().contains("win") ? "mountvol" : "mount";
@@ -26,5 +29,13 @@ public class SyncConfigService {
             return false;
         }
         return PathValidationUtils.isMountPointOutputContainsMountPoint(output, mountPoint);
+    }
+
+    public Short createSyncConfig(CreateSyncConfigRequest request) {
+        byte maximumRetryCount = request.getMaxRetry();
+        if (maximumRetryCount > MAXIMUM_RETRY_LIMIT) throw new MaximumRetryCountExceedException();
+
+
+        return 0;
     }
 }
