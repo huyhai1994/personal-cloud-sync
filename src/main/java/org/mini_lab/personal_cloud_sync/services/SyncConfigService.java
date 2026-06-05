@@ -1,8 +1,13 @@
 package org.mini_lab.personal_cloud_sync.services;
 
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
+import org.mini_lab.personal_cloud_sync.exception.DuplicateSyncConfigException;
 import org.mini_lab.personal_cloud_sync.exception.LocalPathIsNotDirectory;
 import org.mini_lab.personal_cloud_sync.exception.MaximumRetryCountExceedException;
+import org.mini_lab.personal_cloud_sync.exception.SyncConfigNotFoundException;
+import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.util.PathValidationUtils;
 import org.springframework.stereotype.Service;
 
@@ -14,9 +19,12 @@ import java.nio.file.InvalidPathException;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class SyncConfigService {
 
     public static final int MAXIMUM_RETRY_LIMIT = 5;
+
+    private final SyncConfigRepository syncConfigRepository;
 
     public boolean checkMountViaCommand(String mountPoint) throws IOException, InterruptedException {
         String command = System.getProperty("os.name").toLowerCase().contains("win") ? "mountvol" : "mount";
@@ -53,7 +61,8 @@ public class SyncConfigService {
             throw new InvalidPathException("Source Path", "Local path not exists");
         if (!PathValidationUtils.pathIsDirectory(sourcePath))
             throw new LocalPathIsNotDirectory();
-
+        if (syncConfigRepository.existsSyncConfigBySourcePathAndTargetPath(sourcePath, targetPath))
+            throw new DuplicateSyncConfigException();
 
         return 0;
     }

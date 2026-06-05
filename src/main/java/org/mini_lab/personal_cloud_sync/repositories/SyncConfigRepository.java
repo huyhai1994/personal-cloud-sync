@@ -11,4 +11,6 @@ public interface SyncConfigRepository extends JpaRepository<SyncConfig, Short> {
     @Transactional(readOnly = true)
     List<SyncConfig> getSyncConfigByEnabled(Boolean enabled, Pageable pageable);
 
+    boolean existsSyncConfigBySourcePathAndTargetPath(String sourcePath, String targetPath);
+
 }

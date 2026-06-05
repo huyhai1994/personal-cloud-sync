@@ -141,5 +141,15 @@ class SyncConfigRepositoryTest {
         assertFalse(foundSyncConfig.orElseThrow().getEnabled());
     }
 
+    @Test
+    void when_save_source_path_and_target_path_exist_should_return_true() {
+        SyncConfig initialSyncConfig = new SyncConfig();
+        initialSyncConfig.setSourcePath("/source/test/");
+        initialSyncConfig.setTargetPath("/target/test/");
+        initialSyncConfig.setMountPath("/mnt/test");
+        syncConfigRepository.saveAndFlush(initialSyncConfig);
+        assertTrue(syncConfigRepository.existsSyncConfigBySourcePathAndTargetPath("/source/test/", "/target/test/"));
+    }
+
 
 }
