@@ -26,7 +26,6 @@ class SyncConfigRepositoryTest {
     void persist_sync_config_should_success() {
         SyncConfig syncConfig = new SyncConfig();
 
-        syncConfig.setMountPath("/mnt/test");
         syncConfig.setSourcePath("/source/test");
         syncConfig.setTargetPath("/target/test");
         SyncConfig syncConfig1 = syncConfigRepository.saveAndFlush(syncConfig);
@@ -36,14 +35,12 @@ class SyncConfigRepositoryTest {
     @Test
     void persist_invalid_sync_config_should_throw_exception() {
         SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setMountPath("/mnt/test");
         assertThrows(DataIntegrityViolationException.class, () -> syncConfigRepository.saveAndFlush(syncConfig));
     }
 
     @Test
     void persist_sync_config_created_at_auto_generated() {
         SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setMountPath("/mnt/test");
         syncConfig.setSourcePath("/source/test");
         syncConfig.setTargetPath("/target/test");
         SyncConfig syncConfig1 = syncConfigRepository.saveAndFlush(syncConfig);
@@ -53,13 +50,11 @@ class SyncConfigRepositoryTest {
     @Test
     void source_path_and_target_path_should_be_unique() {
         SyncConfig enabledConfig1 = new SyncConfig();
-        enabledConfig1.setMountPath("/mnt/test");
         enabledConfig1.setSourcePath("/source/test/1");
         enabledConfig1.setTargetPath("/target/test/1");
 
         SyncConfig enabledConfig2 = new SyncConfig();
         enabledConfig2.setEnabled(false);
-        enabledConfig2.setMountPath("/mnt/test");
         enabledConfig2.setSourcePath("/source/test/1");
         enabledConfig2.setTargetPath("/target/test/1");
         syncConfigRepository.saveAndFlush(enabledConfig1);
@@ -73,13 +68,11 @@ class SyncConfigRepositoryTest {
     void get_sync_config_by_enabled_should_return_only_enabled_configs() {
 
         SyncConfig enabledConfig = new SyncConfig();
-        enabledConfig.setMountPath("/mnt/test");
         enabledConfig.setSourcePath("/source/test");
         enabledConfig.setTargetPath("/target/test");
 
         SyncConfig disabledConfig = new SyncConfig();
         disabledConfig.setEnabled(false);
-        disabledConfig.setMountPath("/mnt/test");
         disabledConfig.setSourcePath("/source/test/disabled");
         disabledConfig.setTargetPath("/target/test/disabled");
 
@@ -94,7 +87,6 @@ class SyncConfigRepositoryTest {
 
         assertEquals(1, result.size());
         assertTrue(result.get(0).getEnabled());
-        assertEquals("/mnt/test", result.get(0).getMountPath());
 
     }
 
@@ -102,13 +94,11 @@ class SyncConfigRepositoryTest {
     void get_sync_config_by_enabled_should_apply_pagination() {
 
         SyncConfig enabledConfig1 = new SyncConfig();
-        enabledConfig1.setMountPath("/mnt/test");
         enabledConfig1.setSourcePath("/source/test/1");
         enabledConfig1.setTargetPath("/target/test/1");
 
         SyncConfig enabledConfig2 = new SyncConfig();
         enabledConfig2.setEnabled(false);
-        enabledConfig2.setMountPath("/mnt/test");
         enabledConfig2.setSourcePath("/source/test/2");
         enabledConfig2.setTargetPath("/target/test/2");
 
@@ -123,14 +113,12 @@ class SyncConfigRepositoryTest {
 
         assertEquals(1, result.size());
         assertTrue(result.get(0).getEnabled());
-        assertEquals("/mnt/test", result.get(0).getMountPath());
 
     }
 
     @Test
     void find_sync_config_by_id() {
         SyncConfig initialSyncConfig = new SyncConfig();
-        initialSyncConfig.setMountPath("/mnt/test");
         initialSyncConfig.setSourcePath("/source/test/1");
         initialSyncConfig.setTargetPath("/target/test/1");
         initialSyncConfig.setEnabled(Boolean.FALSE);
@@ -146,7 +134,6 @@ class SyncConfigRepositoryTest {
         SyncConfig initialSyncConfig = new SyncConfig();
         initialSyncConfig.setSourcePath("/source/test/");
         initialSyncConfig.setTargetPath("/target/test/");
-        initialSyncConfig.setMountPath("/mnt/test");
         syncConfigRepository.saveAndFlush(initialSyncConfig);
         assertTrue(syncConfigRepository.existsSyncConfigBySourcePathAndTargetPath("/source/test/", "/target/test/"));
     }

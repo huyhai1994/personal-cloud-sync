@@ -49,9 +49,6 @@ public class SyncConfig {
     @Column(name = "target_path", length = 500, nullable = false)
     private String targetPath;
 
-    @Column(name = "mount_path", length = 500, nullable = false)
-    private String mountPath;
-
     @Column(name = "max_retry", columnDefinition = "TINYINT", length = 10)
     private Byte maxRetry = 3;
 
