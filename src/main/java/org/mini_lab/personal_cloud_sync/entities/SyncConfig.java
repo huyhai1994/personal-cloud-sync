@@ -52,7 +52,7 @@ public class SyncConfig {
     @Column(name = "mount_path", length = 500, nullable = false)
     private String mountPath;
 
-    @Column(name = "max_retry", columnDefinition = "TINYINT")
+    @Column(name = "max_retry", columnDefinition = "TINYINT", length = 10)
     private Byte maxRetry = 3;
 
     @Enumerated(EnumType.STRING)
@@ -60,7 +60,7 @@ public class SyncConfig {
     private ScheduleType scheduleType = ScheduleType.MANUAL;
 
     @Column(name = "sync_interval")
-    private Short interval;
+    private Short scheduleInterval;
 
     @Column(name = "run_time")
     private LocalTime runTime;
