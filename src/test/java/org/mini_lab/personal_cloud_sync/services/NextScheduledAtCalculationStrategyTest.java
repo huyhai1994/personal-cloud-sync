@@ -168,7 +168,6 @@ class NextScheduledAtCalculationStrategyTest {
         request.setRunTime(LocalTime.parse("10:00"));
 
         assertEquals(OffsetDateTime.parse("2026-06-06T10:00:00Z"), NextScheduledAtCalculationStrategy.estimateNextScheduledAt(request, fixedClock).orElseThrow());
-
     }
 
 }

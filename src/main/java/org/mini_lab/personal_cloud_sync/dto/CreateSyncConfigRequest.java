@@ -5,6 +5,7 @@ import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 
 import java.time.LocalTime;
 
+@Builder
 @Getter
 @Setter
 @ToString

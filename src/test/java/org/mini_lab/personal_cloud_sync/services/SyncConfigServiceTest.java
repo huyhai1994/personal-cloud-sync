@@ -4,13 +4,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
+import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.exception.DuplicateSyncConfigException;
+import org.mini_lab.personal_cloud_sync.exception.InternalServerException;
 import org.mini_lab.personal_cloud_sync.exception.LocalPathIsNotDirectory;
 import org.mini_lab.personal_cloud_sync.exception.MaximumRetryCountExceedException;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -153,5 +156,21 @@ class SyncConfigServiceTest {
         );
 
         verify(syncConfigRepository, never()).save(any());
+    }
+
+    @Test
+    void createSyncConfig_shouldThrowInternalServerException_whenDataBaseConnectionFailed() throws IOException {
+        Path sourcePath = Files.createDirectory(tempDir.resolve("source"));
+        Path targetPath = Files.createDirectory(tempDir.resolve("target"));
+
+        CreateSyncConfigRequest request = new CreateSyncConfigRequest();
+        request.setSourcePath(sourcePath.toString());
+        request.setTargetPath(targetPath.toString());
+        when(syncConfigRepository.save(any(SyncConfig.class))).thenThrow(new DataAccessException("DB is not reachable") {
+        });
+
+        assertThrows(InternalServerException.class, () -> syncConfigService.createSyncConfig(request));
+
+        verify(syncConfigRepository).save(any(SyncConfig.class));
     }
 }
