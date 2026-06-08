@@ -1,0 +1,98 @@
+package org.mini_lab.personal_cloud_sync.services;
+
+import lombok.RequiredArgsConstructor;
+import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
+import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
+import org.mini_lab.personal_cloud_sync.exception.DuplicateSyncConfigException;
+import org.mini_lab.personal_cloud_sync.exception.LocalPathIsNotDirectory;
+import org.mini_lab.personal_cloud_sync.exception.MaximumRetryCountExceedException;
+import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
+import org.mini_lab.personal_cloud_sync.util.PathValidationUtils;
+import org.springframework.stereotype.Service;
+
+import java.nio.file.InvalidPathException;
+import java.time.LocalTime;
+import java.util.Objects;
+
+@Service
+@RequiredArgsConstructor
+public class SyncConfigValidator implements ISyncConfigValidator {
+    public static final int MAXIMUM_RETRY_LIMIT = 5;
+    private final SyncConfigRepository syncConfigRepository;
+
+    public void validateCreateSyncConfigRequest(CreateSyncConfigRequest request) {
+        ScheduleType scheduleType = request.getScheduleType();
+        Short scheduleInterval = request.getScheduleInterval();
+        LocalTime runTime = request.getRunTime();
+        String sourcePath = request.getSourcePath();
+        String targetPath = request.getTargetPath();
+        Byte maximumRetryCount = request.getMaxRetry();
+
+        validateMaximumRetryCount(maximumRetryCount);
+        validatePath(sourcePath, targetPath);
+        validateIfSourceAndTargetPathExisted(sourcePath, targetPath);
+        validateScheduleType(scheduleType, runTime, scheduleInterval);
+
+    }
+
+    private static void validateScheduleType(ScheduleType scheduleType, LocalTime runTime, Short scheduleInterval) {
+        if (Objects.requireNonNull(scheduleType) == ScheduleType.INTERVAL) {
+            if (runTime != null) {
+                throw new IllegalArgumentException("INTERVAL schedule must not have runTime");
+            }
+
+            if (scheduleInterval == null) {
+                throw new IllegalArgumentException("INTERVAL schedule requires scheduleInterval");
+            }
+
+            if (scheduleInterval <= 0) {
+                throw new IllegalArgumentException("scheduleInterval must be greater than 0");
+            }
+        } else if (scheduleType == ScheduleType.DAILY) {
+            if (runTime == null) {
+                throw new IllegalArgumentException("Daily schedule requires runTime");
+            }
+
+            if (scheduleInterval != null) {
+                throw new IllegalArgumentException("INTERVAL schedule must not have scheduleInterval");
+            }
+        }
+    }
+
+    private void validateIfSourceAndTargetPathExisted(String sourcePath, String targetPath) {
+        if (syncConfigRepository.existsSyncConfigBySourcePathAndTargetPath(sourcePath, targetPath)) {
+            throw new DuplicateSyncConfigException();
+        }
+    }
+
+    private static void validatePath(String sourcePath, String targetPath) {
+        if (PathValidationUtils.isPathNull(sourcePath)) {
+            throw new InvalidPathException("Source Path", "Source Path should not be null");
+        }
+
+        if (PathValidationUtils.isPathNull(targetPath)) {
+            throw new InvalidPathException("Target Path", "Target Path should not be null");
+        }
+
+        if (PathValidationUtils.isPathBlank(sourcePath)) {
+            throw new InvalidPathException("Source Path", "Source Path should not be blank");
+        }
+        if (PathValidationUtils.isPathBlank(targetPath)) {
+            throw new InvalidPathException("Target Path", "Target Path should not be blank");
+        }
+
+        if (!PathValidationUtils.pathIsExits(sourcePath)) {
+            throw new InvalidPathException("Source Path", "Local path does not exist");
+        }
+
+        if (!PathValidationUtils.pathIsDirectory(sourcePath)) {
+            throw new LocalPathIsNotDirectory();
+        }
+    }
+
+    private static void validateMaximumRetryCount(Byte maximumRetryCount) {
+        if (maximumRetryCount != null && maximumRetryCount > MAXIMUM_RETRY_LIMIT) {
+            throw new MaximumRetryCountExceedException();
+        }
+    }
+}

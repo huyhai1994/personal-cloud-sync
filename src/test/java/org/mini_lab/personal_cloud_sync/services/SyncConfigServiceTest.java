@@ -21,10 +21,7 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SyncConfigServiceTest {
@@ -32,76 +29,121 @@ class SyncConfigServiceTest {
     @TempDir
     Path tempDir;
 
+    @InjectMocks
+    private SyncConfigService syncConfigService;
+
+
     @Mock
     private SyncConfigRepository syncConfigRepository;
 
-    @InjectMocks
-    private SyncConfigService syncConfigService;
+    @Mock
+    private ISyncConfigValidator syncConfigValidator;
+
+    @Mock
+    private SyncConfigMapper syncConfigMapper;
 
     @Test
     void maximum_retry_count_exceed_should_throw_exception() {
         // given
         CreateSyncConfigRequest request = new CreateSyncConfigRequest();
-        request.setMaxRetry((byte) 10);
 
-        // when & then
+        // when
+        doThrow(new MaximumRetryCountExceedException())
+                .when(syncConfigValidator)
+                .validateCreateSyncConfigRequest(request);
+
+        // then
         assertThrows(MaximumRetryCountExceedException.class, () ->
                 syncConfigService.createSyncConfig(request)
         );
+
+        verify(syncConfigValidator).validateCreateSyncConfigRequest(request);
+        verify(syncConfigRepository, never()).save(any());
+
     }
 
     @Test
-    void source_path_is_null_should_throw_exception() {
+    void createSyncConfig_shouldNotSave_whenValidatorThrowsInvalidPathException_sourcePathIsNull() {
         // given
         CreateSyncConfigRequest request = new CreateSyncConfigRequest();
         request.setTargetPath(tempDir.toString());
+
+        doThrow(new InvalidPathException("sourcePath", "sourcePath should not be null"))
+                .when(syncConfigValidator)
+                .validateCreateSyncConfigRequest(request);
 
         // when & then
         assertThrows(InvalidPathException.class, () ->
                 syncConfigService.createSyncConfig(request)
         );
+
+        verify(syncConfigValidator).validateCreateSyncConfigRequest(request);
+        verify(syncConfigRepository, never()).save(any());
     }
 
     @Test
-    void target_path_is_null_should_throw_exception() {
+    void createSyncConfig_shouldNotSave_whenValidatorThrowsInvalidPathException_targetPathIsNull() {
         // given
         CreateSyncConfigRequest request = new CreateSyncConfigRequest();
         request.setSourcePath(tempDir.toString());
 
         // when & then
+        doThrow(new InvalidPathException("targetPath", "targetPath should not be null"))
+                .when(syncConfigValidator)
+                .validateCreateSyncConfigRequest(request);
+
+        // when & then
         assertThrows(InvalidPathException.class, () ->
                 syncConfigService.createSyncConfig(request)
         );
+
+        verify(syncConfigValidator).validateCreateSyncConfigRequest(request);
+        verify(syncConfigRepository, never()).save(any());
     }
 
     @Test
-    void source_path_is_blank_should_throw_exception() {
+    void createSyncConfig_shouldNotSave_whenValidatorThrowsInvalidPathException_sourcePathIsBlank() {
         // given
         CreateSyncConfigRequest request = new CreateSyncConfigRequest();
         request.setSourcePath(" ");
         request.setTargetPath(tempDir.toString());
 
         // when & then
-        assertThrows(InvalidPathException.class, () ->
-                syncConfigService.createSyncConfig(request)
-        );
-    }
-
-    @Test
-    void target_path_is_blank_should_throw_exception() {
-        // given
-        CreateSyncConfigRequest request = new CreateSyncConfigRequest();
-        request.setSourcePath(tempDir.toString());
-        request.setTargetPath(" ");
+        doThrow(new InvalidPathException("sourcePath", "sourcePath should not be blank"))
+                .when(syncConfigValidator)
+                .validateCreateSyncConfigRequest(request);
 
         // when & then
         assertThrows(InvalidPathException.class, () ->
                 syncConfigService.createSyncConfig(request)
         );
+
+        verify(syncConfigValidator).validateCreateSyncConfigRequest(request);
+        verify(syncConfigRepository, never()).save(any());
     }
 
     @Test
-    void local_path_is_not_directory_should_throw_exception() throws IOException {
+    void createSyncConfig_shouldNotSave_whenValidatorThrowsInvalidPathException_targetPathIsBlank() {
+        // given
+        CreateSyncConfigRequest request = new CreateSyncConfigRequest();
+        request.setSourcePath(tempDir.toString());
+        request.setTargetPath(" ");
+
+        doThrow(new InvalidPathException("targetPath", "targetPath should not be blank"))
+                .when(syncConfigValidator)
+                .validateCreateSyncConfigRequest(request);
+
+        // when & then
+        assertThrows(InvalidPathException.class, () ->
+                syncConfigService.createSyncConfig(request)
+        );
+
+        verify(syncConfigValidator).validateCreateSyncConfigRequest(request);
+        verify(syncConfigRepository, never()).save(any());
+    }
+
+    @Test
+    void createSyncConfig_shouldNotSave_whenValidatorThrowsLocalPathIsNotDirectory_sourceFileNotExist() throws IOException {
         // given
         Path sourceFile = Files.createFile(tempDir.resolve("source.txt"));
 
@@ -109,29 +151,21 @@ class SyncConfigServiceTest {
         request.setSourcePath(sourceFile.toString());
         request.setTargetPath(tempDir.toString());
 
+        doThrow(new LocalPathIsNotDirectory())
+                .when(syncConfigValidator)
+                .validateCreateSyncConfigRequest(request);
+
         // when & then
         assertThrows(LocalPathIsNotDirectory.class, () ->
                 syncConfigService.createSyncConfig(request)
         );
+
+        verify(syncConfigValidator).validateCreateSyncConfigRequest(request);
+        verify(syncConfigRepository, never()).save(any());
     }
 
     @Test
-    void local_path_is_not_exist_should_throw_exception() {
-        // given
-        Path notExistPath = tempDir.resolve("not-exist-dir");
-
-        CreateSyncConfigRequest request = new CreateSyncConfigRequest();
-        request.setSourcePath(notExistPath.toString());
-        request.setTargetPath(tempDir.toString());
-
-        // when & then
-        assertThrows(InvalidPathException.class, () ->
-                syncConfigService.createSyncConfig(request)
-        );
-    }
-
-    @Test
-    void sync_config_already_exists_should_throw_exception() throws IOException {
+    void createSyncConfig_shouldNotSave_whenValidatorThrowsDuplicateSyncConfigException() throws IOException {
         // given
         Path sourcePath = Files.createDirectory(tempDir.resolve("source"));
         Path targetPath = Files.createDirectory(tempDir.resolve("target"));
@@ -140,16 +174,16 @@ class SyncConfigServiceTest {
         request.setSourcePath(sourcePath.toString());
         request.setTargetPath(targetPath.toString());
 
-        when(syncConfigRepository.existsSyncConfigBySourcePathAndTargetPath(
-                sourcePath.toString(),
-                targetPath.toString()
-        )).thenReturn(true); //Nó giả lập repo trả lời rằng config đã tồn tại.
+        doThrow(new DuplicateSyncConfigException())
+                .when(syncConfigValidator)
+                .validateCreateSyncConfigRequest(request);
 
         // when & then
         assertThrows(DuplicateSyncConfigException.class, () ->
                 syncConfigService.createSyncConfig(request)
         );
 
+        verify(syncConfigValidator).validateCreateSyncConfigRequest(request);
         verify(syncConfigRepository, never()).save(any());
     }
 
@@ -163,9 +197,11 @@ class SyncConfigServiceTest {
         request.setTargetPath(targetPath.toString());
         when(syncConfigRepository.save(any(SyncConfig.class))).thenThrow(new DataAccessException("DB is not reachable") {
         });
+        when(syncConfigMapper.mapCreateSyncConfigRequestToSyncConfig(request)).thenReturn(new SyncConfig());
 
         assertThrows(InternalServerException.class, () -> syncConfigService.createSyncConfig(request));
 
+        verify(syncConfigMapper).mapCreateSyncConfigRequestToSyncConfig(request);
         verify(syncConfigRepository).save(any(SyncConfig.class));
     }
 }
