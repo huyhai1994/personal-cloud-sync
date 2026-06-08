@@ -35,22 +35,6 @@ public class SyncConfigService {
 
     private final SyncConfigRepository syncConfigRepository;
 
-    public boolean checkMountViaCommand(String mountPoint) throws IOException, InterruptedException {
-        String command = System.getProperty("os.name").toLowerCase().contains("win") ? "mountvol" : "mount";
-        ProcessBuilder pb = new ProcessBuilder(command);
-        Process ps = pb.start();
-        InputStream inputStream = ps.getInputStream();
-        String output;
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(inputStream))) {
-            output = br.lines().collect(Collectors.joining("\n"));
-        }
-        int exitCode = ps.waitFor();
-        if (0 != exitCode) {
-            return false;
-        }
-        return PathValidationUtils.isMountPointOutputContainsMountPoint(output, mountPoint);
-    }
-
     @Transactional
     public Short createSyncConfig(CreateSyncConfigRequest request) {
         Byte maximumRetryCount = request.getMaxRetry();

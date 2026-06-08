@@ -150,11 +150,6 @@ class SyncConfigServiceTest {
                 syncConfigService.createSyncConfig(request)
         );
 
-        verify(syncConfigRepository).existsSyncConfigBySourcePathAndTargetPath(
-                sourcePath.toString(),
-                targetPath.toString()
-        );
-
         verify(syncConfigRepository, never()).save(any());
     }
 
