@@ -1,5 +1,6 @@
 package org.mini_lab.personal_cloud_sync.repositories;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,11 @@ class SyncConfigRepositoryTest {
 
     @Autowired
     private SyncConfigRepository syncConfigRepository;
+
+    @BeforeEach
+    void setUp() {
+        syncConfigRepository.deleteAll();
+    }
 
     @Test
     void persist_sync_config_should_success() {

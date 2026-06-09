@@ -36,7 +36,7 @@ public class SyncConfigValidator implements ISyncConfigValidator {
     }
 
     private static void validateScheduleType(ScheduleType scheduleType, LocalTime runTime, Short scheduleInterval) {
-        if (Objects.requireNonNull(scheduleType) == ScheduleType.INTERVAL) {
+        if (scheduleType == ScheduleType.INTERVAL) {
             if (runTime != null) {
                 throw new IllegalArgumentException("INTERVAL schedule must not have runTime");
             }
@@ -54,7 +54,7 @@ public class SyncConfigValidator implements ISyncConfigValidator {
             }
 
             if (scheduleInterval != null) {
-                throw new IllegalArgumentException("INTERVAL schedule must not have scheduleInterval");
+                throw new IllegalArgumentException("Daily schedule must not have scheduleInterval");
             }
         }
     }

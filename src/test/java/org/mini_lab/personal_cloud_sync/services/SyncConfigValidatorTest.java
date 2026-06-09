@@ -217,7 +217,7 @@ class SyncConfigValidatorTest {
         request.setRunTime(LocalTime.parse("10:00"));
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> syncConfigValidator.validateCreateSyncConfigRequest(request));
-        assertEquals("INTERVAL schedule must not have scheduleInterval", exception.getMessage());
+        assertEquals("Daily schedule must not have scheduleInterval", exception.getMessage());
 
     }
 
