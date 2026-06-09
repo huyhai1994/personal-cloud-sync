@@ -1,0 +1,2 @@
+ALTER TABLE sync_job
+    MODIFY COLUMN final_status VARCHAR(50) NOT NULL;

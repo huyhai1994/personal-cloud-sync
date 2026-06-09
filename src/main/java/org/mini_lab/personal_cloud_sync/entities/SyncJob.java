@@ -26,7 +26,7 @@ public class SyncJob {
     private List<SyncAttempt> syncAttempts;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "final_status", length = 50)
+    @Column(name = "final_status", length = 50, nullable = false)
     private JobStatus finalStatus;
 
     @Column(name = "created_at")
@@ -42,5 +42,10 @@ public class SyncJob {
     @Column(name = "retry_count", columnDefinition = "TINYINT")
     private Byte retryCount;
 
-
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = OffsetDateTime.now();
+        }
+    }
 }
