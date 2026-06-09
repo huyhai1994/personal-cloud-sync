@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
+import org.mini_lab.personal_cloud_sync.enums.JobStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -30,7 +31,7 @@ class SyncJobRepositoryTest {
     }
 
     @Test
-    void saveSyncJob_shouldSuccess() {
+    void saveSyncJob_missing_finalStatus_shouldThrow() {
         SyncJob syncJob = new SyncJob();
         SyncConfig syncConfig = new SyncConfig();
         syncConfig.setSourcePath("/source/test");
@@ -43,5 +44,20 @@ class SyncJobRepositoryTest {
         });
     }
 
+    @Test
+    void saveSyncJob_should_success() {
+        SyncJob syncJob = new SyncJob();
+        SyncConfig syncConfig = new SyncConfig();
+        syncConfig.setSourcePath("/source/test");
+        syncConfig.setTargetPath("/target/test");
+        SyncConfig persistedSyncConfig = syncConfigRepository.saveAndFlush(syncConfig);
+
+        syncJob.setSyncConfig(persistedSyncConfig);
+        syncJob.setFinalStatus(JobStatus.PENDING);
+
+        SyncJob persistedSyncJob = syncJobRepository.saveAndFlush(syncJob);
+        assertNotNull(persistedSyncConfig.getCreatedAt());
+        assertNotNull(persistedSyncJob.getId());
+    }
 
 }
