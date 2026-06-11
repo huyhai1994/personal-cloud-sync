@@ -1,4 +1,4 @@
-package org.mini_lab.personal_cloud_sync.executor;
+package org.mini_lab.personal_cloud_sync.component;
 
 import org.mini_lab.personal_cloud_sync.dto.RCloneResult;
 

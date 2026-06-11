@@ -120,7 +120,7 @@ class SyncJobRepositoryTest {
     }
 
     @Test
-    @DisplayName("Business Rule: check if an job is pending or running before create new job")
+    @DisplayName("Business Rule: check for duplicate sync job before create a new one")
     void existBySyncConfigAndStatus_shouldReturnTrue_whenPendingJobExists() {
         SyncConfig syncConfig = new SyncConfig();
         syncConfig.setSourcePath("/source/test");

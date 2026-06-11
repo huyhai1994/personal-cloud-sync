@@ -1,4 +1,4 @@
-package org.mini_lab.personal_cloud_sync.builder;
+package org.mini_lab.personal_cloud_sync.component;
 
 import org.junit.jupiter.api.Test;
 
