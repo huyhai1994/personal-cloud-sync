@@ -14,6 +14,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -97,5 +98,25 @@ class SyncJobRepositoryTest {
                 result.stream()
                         .allMatch(job -> job.getFinalStatus() == JobStatus.PENDING)
         );
+    }
+
+
+    @Test
+    void getSyncJobById_shouldReturnOptionalSyncJob() {
+        SyncConfig syncConfig = new SyncConfig();
+        syncConfig.setSourcePath("/source/test");
+        syncConfig.setTargetPath("/target/test");
+        SyncConfig persistedSyncConfig =
+                syncConfigRepository.saveAndFlush(syncConfig);
+
+        SyncJob initialSyncJob = new SyncJob();
+        initialSyncJob.setSyncConfig(persistedSyncConfig);
+        initialSyncJob.setFinalStatus(JobStatus.PENDING);
+
+        SyncJob syncJob = syncJobRepository.saveAndFlush(initialSyncJob);
+        Integer syncJobId = syncJob.getId();
+        Optional<SyncJob> foundSyncJobOpt = syncJobRepository.getSyncJobById(syncJobId);
+        assertNotNull(foundSyncJobOpt.orElseThrow());
+
     }
 }
