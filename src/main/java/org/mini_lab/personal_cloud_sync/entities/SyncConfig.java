@@ -4,8 +4,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.util.List;
 
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 
@@ -33,12 +35,13 @@ public class SyncConfig {
     @OneToMany(mappedBy = "syncConfig", fetch = FetchType.LAZY)
     private List<SyncJob> syncJobs;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at")
-    private OffsetDateTime updatedAt;
+    private Instant updatedAt;
 
     @Column(name = "next_scheduled_at")
     private OffsetDateTime nextScheduledAt;
@@ -61,12 +64,5 @@ public class SyncConfig {
 
     @Column(name = "run_time")
     private LocalTime runTime;
-
-    @PrePersist
-    protected void onCreate() {
-        if (createdAt == null) {
-            createdAt = OffsetDateTime.now();
-        }
-    }
 
 }
