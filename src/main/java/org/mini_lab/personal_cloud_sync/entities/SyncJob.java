@@ -3,8 +3,10 @@ package org.mini_lab.personal_cloud_sync.entities;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -17,7 +19,6 @@ public class SyncJob {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sync_config_id", referencedColumnName = "id")
     private SyncConfig syncConfig;
@@ -29,9 +30,9 @@ public class SyncJob {
     @Column(name = "final_status", length = 50, nullable = false)
     private JobStatus finalStatus;
 
+    @CreationTimestamp
     @Column(name = "created_at")
-    private OffsetDateTime createdAt;
-
+    private Instant createdAt;
 
     @Column(name = "start_at")
     private OffsetDateTime startAt;
@@ -42,10 +43,4 @@ public class SyncJob {
     @Column(name = "retry_count", columnDefinition = "TINYINT")
     private Byte retryCount;
 
-    @PrePersist
-    protected void onCreate() {
-        if (createdAt == null) {
-            createdAt = OffsetDateTime.now();
-        }
-    }
 }
