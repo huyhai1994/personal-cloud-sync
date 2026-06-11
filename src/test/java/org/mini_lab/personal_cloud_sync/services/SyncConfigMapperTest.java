@@ -1,5 +1,6 @@
 package org.mini_lab.personal_cloud_sync.services;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -7,11 +8,13 @@ import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,6 +26,17 @@ class SyncConfigMapperTest {
 
     @TempDir
     Path tempDir;
+
+    @BeforeEach
+    void setUp() {
+        Clock fixedClock = Clock.fixed(
+                Instant.parse("2026-06-11T00:00:00Z"),
+                ZoneOffset.UTC
+        );
+
+        syncConfigMapper = new SyncConfigMapper(fixedClock);
+    }
+
 
     @Test
     void mapCreateSyncConfigRequestToSyncConfig_shouldReturnDefaultMaxRetry_whenMaxRetryIsNull() {
