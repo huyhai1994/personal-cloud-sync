@@ -1,7 +1,7 @@
 package org.mini_lab.personal_cloud_sync.repositories;
 
-import org.hibernate.query.Page;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
@@ -117,6 +117,23 @@ class SyncJobRepositoryTest {
         Integer syncJobId = syncJob.getId();
         Optional<SyncJob> foundSyncJobOpt = syncJobRepository.getSyncJobById(syncJobId);
         assertNotNull(foundSyncJobOpt.orElseThrow());
+    }
+
+    @Test
+    @DisplayName("Business Rule: check if an job is pending or running before create new job")
+    void existBySyncConfigAndStatus_shouldReturnTrue_whenPendingJobExists() {
+        SyncConfig syncConfig = new SyncConfig();
+        syncConfig.setSourcePath("/source/test");
+        syncConfig.setTargetPath("/target/test");
+        SyncConfig persistedSyncConfig =
+                syncConfigRepository.saveAndFlush(syncConfig);
+
+        SyncJob firstSyncJob = new SyncJob();
+        firstSyncJob.setSyncConfig(persistedSyncConfig);
+        firstSyncJob.setFinalStatus(JobStatus.PENDING);
+
+        syncJobRepository.saveAndFlush(firstSyncJob);
+        assertTrue(syncJobRepository.existsBySyncConfigIdAndFinalStatusIn(persistedSyncConfig.getId(), List.of(JobStatus.PENDING, JobStatus.RUNNING)));
 
     }
 }
