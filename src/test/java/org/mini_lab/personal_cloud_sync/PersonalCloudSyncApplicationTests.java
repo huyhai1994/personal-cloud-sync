@@ -3,6 +3,7 @@ package org.mini_lab.personal_cloud_sync;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
+import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -26,8 +27,12 @@ class PersonalCloudSyncApplicationTests {
     @Autowired
     private SyncConfigRepository syncConfigRepository;
 
+    @Autowired
+    private SyncJobRepository syncJobRepository;
+
     @BeforeEach
     void setUp() {
+        syncJobRepository.deleteAll();
         syncConfigRepository.deleteAll();
     }
 
