@@ -23,11 +23,6 @@ class SyncConfigRepositoryTest {
     @Autowired
     private SyncConfigRepository syncConfigRepository;
 
-    @BeforeEach
-    void setUp() {
-        syncConfigRepository.deleteAll();
-    }
-
     @Test
     void persist_sync_config_should_success() {
         SyncConfig syncConfig = new SyncConfig();

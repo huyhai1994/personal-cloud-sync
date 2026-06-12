@@ -29,11 +29,6 @@ class SyncJobRepositoryTest {
     @Autowired
     private SyncConfigRepository syncConfigRepository;
 
-    @BeforeEach
-    void setUp() {
-        syncJobRepository.deleteAll();
-    }
-
     @Test
     void saveSyncJob_missing_finalStatus_shouldThrow() {
         SyncJob syncJob = new SyncJob();
