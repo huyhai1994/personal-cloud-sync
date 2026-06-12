@@ -11,9 +11,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.util.Objects;
 import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -31,52 +33,58 @@ class SyncJobRepositoryConcurrencyTest {
 
     @AfterEach
     void tearDown() {
-        syncJobRepository.deleteAll();
-        syncConfigRepository.deleteAll();
+        syncJobRepository.deleteAllInBatch();
+        syncConfigRepository.deleteAllInBatch();
     }
 
     @Test
-    void updateStatusIfCurrentStatus_shouldReturnOne_WhenTwoThreadUpdateSameTime() throws InterruptedException, ExecutionException {
+    void updateStatusIfCurrentStatus_shouldAllowOneThreadToUpdate_WhenTwoThreadUpdateSameTime() throws InterruptedException, ExecutionException, TimeoutException {
         int numberOfThread = 2;
-        ExecutorService executorService = Executors.newFixedThreadPool(numberOfThread);
         CountDownLatch readyLatch = new CountDownLatch(numberOfThread);
         CountDownLatch startLatch = new CountDownLatch(1);
 
-        SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
-        SyncConfig persistedSyncConfig =
-                syncConfigRepository.saveAndFlush(syncConfig);
+        ExecutorService executorService = Executors.newFixedThreadPool(numberOfThread);
+        try {
+            SyncConfig persistedSyncConfig = transactionTemplate.execute(status -> {
+                SyncConfig syncConfig = new SyncConfig();
+                syncConfig.setSourcePath("/source/test");
+                syncConfig.setTargetPath("/target/test");
+                return syncConfigRepository.save(syncConfig);
+            });
 
-        SyncJob firstSyncJob = new SyncJob();
-        firstSyncJob.setSyncConfig(persistedSyncConfig);
-        firstSyncJob.setFinalStatus(JobStatus.PENDING);
+            Objects.requireNonNull(persistedSyncConfig);
+            SyncJob savedSyncJob = transactionTemplate.execute(status -> {
+                SyncJob firstSyncJob = new SyncJob();
+                firstSyncJob.setSyncConfig(persistedSyncConfig);
+                firstSyncJob.setFinalStatus(JobStatus.PENDING);
+                return syncJobRepository.saveAndFlush(firstSyncJob);
+            });
 
-        SyncJob savedSyncJob = syncJobRepository.saveAndFlush(firstSyncJob);
-        Integer syncJobId = savedSyncJob.getId();
+            Objects.requireNonNull(savedSyncJob);
+            Integer syncJobId = savedSyncJob.getId();
 
-        Callable<Integer> task = () -> {
-            readyLatch.countDown();
-            startLatch.await();
-            return transactionTemplate.execute(status ->
-                    syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.RUNNING)
-            );
-        };
+            Callable<Integer> task = () -> {
+                readyLatch.countDown();
+                startLatch.await();
+                return transactionTemplate.execute(status -> syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.RUNNING));
+            };
 
-        Future<Integer> future1 = executorService.submit(task);
-        Future<Integer> future2 = executorService.submit(task);
+            Future<Integer> future1 = executorService.submit(task);
+            Future<Integer> future2 = executorService.submit(task);
 
-        readyLatch.await();
-        startLatch.countDown();
+            assertTrue(readyLatch.await(5, TimeUnit.SECONDS));
+            startLatch.countDown();
 
-        Integer result1 = future1.get();
-        Integer result2 = future2.get();
-        executorService.shutdown();
+            Integer result1 = future1.get(5, TimeUnit.SECONDS);
+            Integer result2 = future2.get(5, TimeUnit.SECONDS);
 
-        assertEquals(1, result1 + result2);
+            assertEquals(1, result1 + result2);
 
-        SyncJob reloaded = syncJobRepository.findById(syncJobId).orElseThrow();
-        assertEquals(JobStatus.RUNNING, reloaded.getFinalStatus());
+            SyncJob reloaded = syncJobRepository.findById(syncJobId).orElseThrow();
+            assertEquals(JobStatus.RUNNING, reloaded.getFinalStatus());
+        } finally {
+            executorService.shutdown();
+        }
 
 
     }
