@@ -24,3 +24,5 @@ logging:
               BasicBinder: TRACE
         orm:
           results: TRACE
+rclone:
+  timeout-second: 5
