@@ -57,7 +57,7 @@ class SyncJobRepositoryConcurrencyTest {
                 SyncJob firstSyncJob = new SyncJob();
                 firstSyncJob.setSyncConfig(persistedSyncConfig);
                 firstSyncJob.setFinalStatus(JobStatus.PENDING);
-                return syncJobRepository.saveAndFlush(firstSyncJob);
+                return syncJobRepository.save(firstSyncJob);
             });
 
             Objects.requireNonNull(savedSyncJob);
@@ -87,6 +87,37 @@ class SyncJobRepositoryConcurrencyTest {
         }
 
 
+    }
+
+    @Test
+    void updateWrongTransitionStatus_shouldReturnZero_whenMarkRunning() {
+        SyncConfig persistedSyncConfig = transactionTemplate.execute(status -> {
+            SyncConfig syncConfig = new SyncConfig();
+            syncConfig.setSourcePath("/source/test");
+            syncConfig.setTargetPath("/target/test");
+            return syncConfigRepository.save(syncConfig);
+        });
+
+        Objects.requireNonNull(persistedSyncConfig);
+        SyncJob savedSyncJob = transactionTemplate.execute(status -> {
+            SyncJob firstSyncJob = new SyncJob();
+            firstSyncJob.setSyncConfig(persistedSyncConfig);
+            firstSyncJob.setFinalStatus(JobStatus.PENDING);
+            return syncJobRepository.saveAndFlush(firstSyncJob);
+        });
+
+        Objects.requireNonNull(savedSyncJob);
+        Integer syncJobId = savedSyncJob.getId();
+
+        Integer updated = transactionTemplate.execute(status ->
+                syncJobRepository.updateStatusIfCurrentStatus(
+                        syncJobId,
+                        JobStatus.RUNNING,
+                        JobStatus.SUCCESS
+                )
+        );
+
+        assertEquals(0, updated);
     }
 }
 
