@@ -1,4 +1,4 @@
-package org.mini_lab.personal_cloud_sync.services;
+package org.mini_lab.personal_cloud_sync.component;
 
 import lombok.RequiredArgsConstructor;
 import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
@@ -8,13 +8,12 @@ import org.mini_lab.personal_cloud_sync.exception.LocalPathIsNotDirectory;
 import org.mini_lab.personal_cloud_sync.exception.MaximumRetryCountExceedException;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.util.PathValidationUtils;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.nio.file.InvalidPathException;
 import java.time.LocalTime;
-import java.util.Objects;
 
-@Service
+@Component
 @RequiredArgsConstructor
 public class SyncConfigValidator implements ISyncConfigValidator {
     public static final int MAXIMUM_RETRY_LIMIT = 5;

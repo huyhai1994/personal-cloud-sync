@@ -1,6 +1,7 @@
 package org.mini_lab.personal_cloud_sync.services;
 
 import org.junit.jupiter.api.Test;
+import org.mini_lab.personal_cloud_sync.component.NextScheduledAtCalculationStrategy;
 import org.mini_lab.personal_cloud_sync.dto.NextScheduledAtRequest;
 import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 

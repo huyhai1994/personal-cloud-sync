@@ -1,17 +1,15 @@
-package org.mini_lab.personal_cloud_sync.executor;
+package org.mini_lab.personal_cloud_sync.component;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.mini_lab.personal_cloud_sync.builder.OneDrivePathResolver;
-import org.mini_lab.personal_cloud_sync.builder.RCloneCommandBuilder;
 import org.mini_lab.personal_cloud_sync.dto.RCloneResult;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.List;
 
 @Slf4j
-@Service
+@Component
 @RequiredArgsConstructor
 public class OneDriveRCloneExecutor implements IRCloneExecutor {
     private final RCloneCommandBuilder rcloneCommandBuilder;

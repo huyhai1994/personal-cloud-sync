@@ -1,7 +1,8 @@
 package org.mini_lab.personal_cloud_sync.repositories;
 
-import org.hibernate.query.Page;
-import org.junit.jupiter.api.BeforeEach;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -28,10 +30,11 @@ class SyncJobRepositoryTest {
     @Autowired
     private SyncConfigRepository syncConfigRepository;
 
-    @BeforeEach
-    void setUp() {
-        syncJobRepository.deleteAll();
-    }
+    @Autowired
+    private EntityManager entityManager;
+
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
 
     @Test
     void saveSyncJob_missing_finalStatus_shouldThrow() {
@@ -97,5 +100,70 @@ class SyncJobRepositoryTest {
                 result.stream()
                         .allMatch(job -> job.getFinalStatus() == JobStatus.PENDING)
         );
+    }
+
+
+    @Test
+    void getSyncJobById_shouldReturnOptionalSyncJob() {
+        SyncConfig syncConfig = new SyncConfig();
+        syncConfig.setSourcePath("/source/test");
+        syncConfig.setTargetPath("/target/test");
+        SyncConfig persistedSyncConfig =
+                syncConfigRepository.saveAndFlush(syncConfig);
+
+        SyncJob initialSyncJob = new SyncJob();
+        initialSyncJob.setSyncConfig(persistedSyncConfig);
+        initialSyncJob.setFinalStatus(JobStatus.PENDING);
+
+        SyncJob syncJob = syncJobRepository.saveAndFlush(initialSyncJob);
+        Integer syncJobId = syncJob.getId();
+        Optional<SyncJob> foundSyncJobOpt = syncJobRepository.getSyncJobById(syncJobId);
+        assertNotNull(foundSyncJobOpt.orElseThrow());
+    }
+
+    @Test
+    @DisplayName("Business Rule: check for duplicate sync job before create a new one")
+    void existBySyncConfigAndStatus_shouldReturnTrue_whenPendingJobExists() {
+        SyncConfig syncConfig = new SyncConfig();
+        syncConfig.setSourcePath("/source/test");
+        syncConfig.setTargetPath("/target/test");
+        SyncConfig persistedSyncConfig =
+                syncConfigRepository.saveAndFlush(syncConfig);
+
+        SyncJob firstSyncJob = new SyncJob();
+        firstSyncJob.setSyncConfig(persistedSyncConfig);
+        firstSyncJob.setFinalStatus(JobStatus.PENDING);
+
+        syncJobRepository.saveAndFlush(firstSyncJob);
+        assertTrue(syncJobRepository.existsBySyncConfigIdAndFinalStatusIn(persistedSyncConfig.getId(), List.of(JobStatus.PENDING, JobStatus.RUNNING)));
+    }
+
+    @Test
+    void getSyncJobById_shouldFetchSynConfigImmediately() {
+        SyncConfig syncConfig = new SyncConfig();
+        syncConfig.setSourcePath("/source/test");
+        syncConfig.setTargetPath("/target/test");
+        SyncConfig persistedSyncConfig = syncConfigRepository.saveAndFlush(syncConfig);
+
+        SyncJob syncJob = new SyncJob();
+        syncJob.setSyncConfig(persistedSyncConfig);
+        syncJob.setFinalStatus(JobStatus.PENDING);
+        SyncJob savedSyncJob = syncJobRepository.saveAndFlush(syncJob);
+
+        Integer id = savedSyncJob.getId();
+
+        entityManager.flush();
+        entityManager.clear();
+
+        SyncJob foundSyncJob = syncJobRepository.getSyncJobById(id).orElseThrow();
+
+        assertNotNull(foundSyncJob.getSyncConfig());
+
+        assertTrue(
+                entityManagerFactory.getPersistenceUnitUtil()
+                        .isLoaded(foundSyncJob, "syncConfig")
+        );
+
+        assertEquals("/source/test", foundSyncJob.getSyncConfig().getSourcePath());
     }
 }

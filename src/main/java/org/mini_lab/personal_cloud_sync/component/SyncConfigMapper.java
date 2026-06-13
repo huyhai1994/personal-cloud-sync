@@ -1,17 +1,17 @@
-package org.mini_lab.personal_cloud_sync.services;
+package org.mini_lab.personal_cloud_sync.component;
 
 import lombok.RequiredArgsConstructor;
 import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
 import org.mini_lab.personal_cloud_sync.dto.NextScheduledAtRequest;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 
-@Service
+@Component
 @RequiredArgsConstructor
 public class SyncConfigMapper {
 
