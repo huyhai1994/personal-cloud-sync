@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class SyncJobStatusService {
+public class SyncJobProcessorService {
     private final SyncJobRepository syncJobRepository;
 
     @Transactional

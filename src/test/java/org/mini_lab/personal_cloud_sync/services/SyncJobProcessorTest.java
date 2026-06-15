@@ -22,7 +22,7 @@ class SyncJobProcessorTest {
     SyncJobProcessor syncJobProcessor;
 
     @Mock
-    SyncJobStatusService syncJobStatusService;
+    SyncJobProcessorService syncJobProcessorService;
 
     @Mock
     IRCloneExecutor rCloneExecutor;
@@ -33,7 +33,7 @@ class SyncJobProcessorTest {
         Integer syncJobId = 100;
         String sourcePath = "source/test";
         String targetPath = "target/test";
-        when(syncJobStatusService.markRunning(syncJobId)).thenThrow(new InvalidJobStateTransitionException());
+        when(syncJobProcessorService.markRunning(syncJobId)).thenThrow(new InvalidJobStateTransitionException());
         // Act + assert
         assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessor.process(syncJobId));
         // Verify
@@ -51,15 +51,15 @@ class SyncJobProcessorTest {
         RCloneResult result = new RCloneResult();
         result.setExitCode(0);
 
-        when(syncJobStatusService.markRunning(syncJobId)).thenReturn(syncJobContext);
+        when(syncJobProcessorService.markRunning(syncJobId)).thenReturn(syncJobContext);
         when(rCloneExecutor.sync(syncJobContext.sourcePath(), syncJobContext.targetPath())).thenReturn(result);
         // Act
         syncJobProcessor.process(syncJobId);
 
         // Assert
-        verify(syncJobStatusService).markRunning(syncJobId);
+        verify(syncJobProcessorService).markRunning(syncJobId);
         verify(rCloneExecutor).sync(sourcePath, targetPath);
-        verify(syncJobStatusService).markSuccess(syncJobId);
+        verify(syncJobProcessorService).markSuccess(syncJobId);
     }
 
     @Test
@@ -73,14 +73,14 @@ class SyncJobProcessorTest {
         RCloneResult result = new RCloneResult();
         result.setExitCode(111);
 
-        when(syncJobStatusService.markRunning(syncJobId)).thenReturn(syncJobContext);
+        when(syncJobProcessorService.markRunning(syncJobId)).thenReturn(syncJobContext);
         when(rCloneExecutor.sync(syncJobContext.sourcePath(), syncJobContext.targetPath())).thenReturn(result);
         // Act
         syncJobProcessor.process(syncJobId);
 
         // Assert
-        verify(syncJobStatusService).markRunning(syncJobId);
+        verify(syncJobProcessorService).markRunning(syncJobId);
         verify(rCloneExecutor).sync(sourcePath, targetPath);
-        verify(syncJobStatusService).markFailed(syncJobId);
+        verify(syncJobProcessorService).markFailed(syncJobId);
     }
 }

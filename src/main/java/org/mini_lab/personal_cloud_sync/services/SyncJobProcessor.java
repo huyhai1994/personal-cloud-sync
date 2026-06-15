@@ -12,7 +12,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class SyncJobProcessor {
     private final IRCloneExecutor rCloneExecutor;
-    private final SyncJobStatusService syncJobProcessorService;
+    private final SyncJobProcessorService syncJobProcessorService;
 
     public void process(Integer syncJobId) {
         SyncJobContext syncJobContext = syncJobProcessorService.markRunning(syncJobId);
