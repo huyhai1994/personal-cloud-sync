@@ -23,7 +23,6 @@ public class SyncJobProcessorService {
         SyncJob syncJob = syncJobRepository.getSyncJobById(syncJobId).orElseThrow();
         SyncConfig syncConfig = syncJob.getSyncConfig();
         Integer syncAttemptId = syncAttemptRecorder.startAttempt(syncJob);
-
         return new SyncJobContext(syncJob.getId(), syncAttemptId, syncConfig.getSourcePath(), syncConfig.getTargetPath());
     }
 
@@ -35,10 +34,11 @@ public class SyncJobProcessorService {
 
     @Transactional
     public void markSuccess(SyncJobContext syncJobContext) {
-        Integer syncJobId = syncJobContext.SyncJobId();
+        Integer syncJobId = syncJobContext.syncJobId();
+        Integer syncAttemptId = syncJobContext.syncAttemptId();
         int claimedJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.SUCCESS);
         assertOnlyOneJobClaimed(claimedJobCount);
-
+        syncAttemptRecorder.markSuccess(syncAttemptId);
     }
 
     private void assertOnlyOneJobClaimed(int numberOfJobClaimed) {
