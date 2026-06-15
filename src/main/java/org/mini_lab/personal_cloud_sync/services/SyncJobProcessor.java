@@ -17,16 +17,16 @@ public class SyncJobProcessor {
     public void process(Integer syncJobId) {
         SyncJobContext syncJobContext = syncJobProcessorService.markRunning(syncJobId);
         try {
-            RCloneResult rCloneResult = rCloneExecutor.sync(syncJobContext.sourcePath(), syncJobContext.targetPath());
+            RCloneResult rCloneResult = rCloneExecutor.sync(syncJobContext);
             if (rCloneResult.isSuccess()) {
                 syncJobProcessorService.markSuccess(syncJobContext);
             } else {
-                syncJobProcessorService.markFailed(syncJobId);
+                syncJobProcessorService.markFailed(syncJobContext);
             }
         } catch (IOException e) {
-            syncJobProcessorService.markFailed(syncJobId);
+            syncJobProcessorService.markFailed(syncJobContext);
         } catch (InterruptedException e) {
-            syncJobProcessorService.markFailed(syncJobId);
+            syncJobProcessorService.markFailed(syncJobContext);
             Thread.currentThread().interrupt();
         }
     }

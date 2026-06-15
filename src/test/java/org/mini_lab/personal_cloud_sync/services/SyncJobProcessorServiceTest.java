@@ -47,8 +47,10 @@ class SyncJobProcessorServiceTest {
     @Test
     void whenUpdatedFail_fromRunningToFailed_shouldThrowInvalidJobStateTransitionException() {
         Integer syncJobId = 100;
+        Integer syncJobAttemptId = 100;
+        SyncJobContext syncJobContext = new SyncJobContext(syncJobId, syncJobAttemptId, "/source/test", "/target/test");
         when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.FAILED)).thenReturn(0);
-        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markFailed(syncJobId));
+        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markFailed(syncJobContext));
     }
 
     @Test

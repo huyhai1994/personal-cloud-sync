@@ -27,7 +27,8 @@ public class SyncJobProcessorService {
     }
 
     @Transactional
-    public void markFailed(Integer syncJobId) {
+    public void markFailed(SyncJobContext syncJobContext) {
+        Integer syncJobId = syncJobContext.syncJobId();
         int claimJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.FAILED);
         assertOnlyOneJobClaimed(claimJobCount);
     }
