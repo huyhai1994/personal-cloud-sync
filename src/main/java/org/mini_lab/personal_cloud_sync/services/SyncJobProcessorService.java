@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SyncJobProcessorService {
     private final SyncJobRepository syncJobRepository;
+    private final SyncAttemptRecorder syncAttemptRecorder;
 
     @Transactional
     public SyncJobContext markRunning(Integer syncJobId) {
@@ -21,7 +22,9 @@ public class SyncJobProcessorService {
         assertOnlyOneJobClaimed(claimedJobCount);
         SyncJob syncJob = syncJobRepository.getSyncJobById(syncJobId).orElseThrow();
         SyncConfig syncConfig = syncJob.getSyncConfig();
-        return new SyncJobContext(syncConfig.getSourcePath(), syncConfig.getTargetPath());
+        Integer syncAttemptId = syncAttemptRecorder.startAttempt(syncJob);
+
+        return new SyncJobContext(syncJob.getId(), syncAttemptId, syncConfig.getSourcePath(), syncConfig.getTargetPath());
     }
 
     @Transactional
@@ -31,9 +34,11 @@ public class SyncJobProcessorService {
     }
 
     @Transactional
-    public void markSuccess(Integer syncJobId) {
+    public void markSuccess(SyncJobContext syncJobContext) {
+        Integer syncJobId = syncJobContext.SyncJobId();
         int claimedJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.SUCCESS);
         assertOnlyOneJobClaimed(claimedJobCount);
+
     }
 
     private void assertOnlyOneJobClaimed(int numberOfJobClaimed) {

@@ -19,7 +19,7 @@ public class SyncJobProcessor {
         try {
             RCloneResult rCloneResult = rCloneExecutor.sync(syncJobContext.sourcePath(), syncJobContext.targetPath());
             if (rCloneResult.isSuccess()) {
-                syncJobProcessorService.markSuccess(syncJobId);
+                syncJobProcessorService.markSuccess(syncJobContext);
             } else {
                 syncJobProcessorService.markFailed(syncJobId);
             }

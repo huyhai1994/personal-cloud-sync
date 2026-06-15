@@ -44,12 +44,14 @@ class SyncJobProcessorTest {
     void whenSyncSuccess_thenMarkSuccessMethodCalled() throws IOException, InterruptedException {
         // Arrange
         Integer syncJobId = 100;
+        Integer syncAttemptId = 100;
         String sourcePath = "source/test";
         String targetPath = "target/test";
-        SyncJobContext syncJobContext = new SyncJobContext(sourcePath, targetPath);
+        SyncJobContext syncJobContext = new SyncJobContext(syncJobId, syncAttemptId, sourcePath, targetPath);
 
         RCloneResult result = new RCloneResult();
         result.setExitCode(0);
+
 
         when(syncJobProcessorService.markRunning(syncJobId)).thenReturn(syncJobContext);
         when(rCloneExecutor.sync(syncJobContext.sourcePath(), syncJobContext.targetPath())).thenReturn(result);
@@ -59,16 +61,17 @@ class SyncJobProcessorTest {
         // Assert
         verify(syncJobProcessorService).markRunning(syncJobId);
         verify(rCloneExecutor).sync(sourcePath, targetPath);
-        verify(syncJobProcessorService).markSuccess(syncJobId);
+        verify(syncJobProcessorService).markSuccess(syncJobContext);
     }
 
     @Test
     void whenSyncFail_thenMarkFailedMethodCalled() throws IOException, InterruptedException {
         // Arrange
         Integer syncJobId = 100;
+        Integer syncJobAttemptId = 100;
         String sourcePath = "source/test";
         String targetPath = "target/test";
-        SyncJobContext syncJobContext = new SyncJobContext(sourcePath, targetPath);
+        SyncJobContext syncJobContext = new SyncJobContext(syncJobId, syncJobAttemptId, sourcePath, targetPath);
 
         RCloneResult result = new RCloneResult();
         result.setExitCode(111);

@@ -24,6 +24,9 @@ class SyncJobProcessorServiceTest {
     @Mock
     SyncJobRepository syncJobRepository;
 
+    @Mock
+    SyncAttemptRecorder syncAttemptRecorder;
+
     @InjectMocks
     SyncJobProcessorService syncJobProcessorService;
 
@@ -51,24 +54,29 @@ class SyncJobProcessorServiceTest {
     @Test
     void whenUpdatedFail_fromRunningToSuccess_shouldThrowInvalidJobStateTransitionException() {
         Integer syncJobId = 100;
+        Integer syncJobAttemptId = 100;
+        SyncJobContext syncJobContext = new SyncJobContext(syncJobId, syncJobAttemptId, "/source/test", "/target/test");
         when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.SUCCESS)).thenReturn(0);
-        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markSuccess(syncJobId));
+        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markSuccess(syncJobContext));
     }
 
     @Test
     void whenUpdatedTrue_fromPendingToRunningState_shouldReturnSyncConfigContext() {
         Integer syncJobId = 100;
+        Integer syncJobAttemptId = 100;
         SyncConfig syncConfig = new SyncConfig();
         syncConfig.setSourcePath("/source/test");
         syncConfig.setTargetPath("/target/test");
 
         SyncJob syncJob = new SyncJob();
+        syncJob.setId(syncJobId);
         syncJob.setSyncConfig(syncConfig);
         syncJob.setFinalStatus(JobStatus.PENDING);
 
         when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.RUNNING)).thenReturn(1);
         when(syncJobRepository.getSyncJobById(syncJobId)).thenReturn(Optional.of(syncJob));
-        SyncJobContext syncJobContext = new SyncJobContext("/source/test", "/target/test");
+        when(syncAttemptRecorder.startAttempt(syncJob)).thenReturn(syncJobAttemptId);
+        SyncJobContext syncJobContext = new SyncJobContext(syncJobId, syncJobAttemptId, "/source/test", "/target/test");
         assertEquals(syncJobContext, syncJobProcessorService.markRunning(syncJobId));
     }
 }

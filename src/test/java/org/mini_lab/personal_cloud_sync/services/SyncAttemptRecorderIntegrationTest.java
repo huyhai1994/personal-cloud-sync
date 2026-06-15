@@ -18,6 +18,7 @@ import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -73,9 +74,7 @@ class SyncAttemptRecorderIntegrationTest {
     void startAttempt_whenSuccess_shouldCreateRunningAttempt() {
         Integer syncAttemptId = transactionTemplate.execute(status -> syncAttemptRecorder.startAttempt(persistedSyncJob));
         assertNotNull(syncAttemptId);
-        SyncAttempt persistedSyncAttempt = transactionTemplate.execute(status ->
-                syncAttemptRepository.findById(syncAttemptId).orElseThrow()
-        );
+        SyncAttempt persistedSyncAttempt = transactionTemplate.execute(status -> syncAttemptRepository.findById(syncAttemptId).orElseThrow());
         assertNotNull(persistedSyncAttempt);
         assertNull(persistedSyncAttempt.getFinishedAt());
         assertNotNull(persistedSyncAttempt.getStartAt());
@@ -85,15 +84,36 @@ class SyncAttemptRecorderIntegrationTest {
 
     @Test
     void markSuccess_whenNoTransaction_shouldThrowIllegalTransactionStateException() {
-        assertThrows(IllegalTransactionStateException.class, () -> syncAttemptRecorder.startAttempt(persistedSyncJob));
+
+        Integer syncAttemptId = transactionTemplate.execute(status -> syncAttemptRecorder.startAttempt(persistedSyncJob));
+        assertNotNull(syncAttemptId);
+        SyncAttempt persistedSyncAttempt = transactionTemplate.execute(status -> syncAttemptRepository.findById(syncAttemptId).orElseThrow());
+        assertNotNull(persistedSyncAttempt.getId());
+        assertThrows(IllegalTransactionStateException.class, () -> syncAttemptRecorder.markSuccess(persistedSyncAttempt.getId()));
     }
 
+    @Test
     void markSuccess_whenRunningAttempt_shouldUpdateToSuccessAndFinishAt() {
-
-
+        Integer syncAttemptId = transactionTemplate.execute(status -> syncAttemptRecorder.startAttempt(persistedSyncJob));
+        assertNotNull(syncAttemptId);
+        SyncAttempt persistedSyncAttempt = transactionTemplate.execute(status -> syncAttemptRepository.findById(syncAttemptId).orElseThrow());
+        assertNotNull(persistedSyncAttempt.getId());
+        transactionTemplate.executeWithoutResult(status -> syncAttemptRecorder.markSuccess(persistedSyncAttempt.getId()));
+        SyncAttempt saved = transactionTemplate.execute(status -> syncAttemptRepository.findById(persistedSyncAttempt.getId())).get();
+        assertEquals(JobStatus.SUCCESS, saved.getAttemptStatus());
+        assertNotNull(saved.getFinishedAt());
     }
 
+    @Test
     void markFailed_whenRunningAttempt_shouldUpdateToFailedAndFinishAt() {
+        Integer syncAttemptId = transactionTemplate.execute(status -> syncAttemptRecorder.startAttempt(persistedSyncJob));
+        assertNotNull(syncAttemptId);
+        SyncAttempt persistedSyncAttempt = transactionTemplate.execute(status -> syncAttemptRepository.findById(syncAttemptId).orElseThrow());
+        assertNotNull(persistedSyncAttempt.getId());
+        transactionTemplate.executeWithoutResult(status -> syncAttemptRecorder.markFailed(persistedSyncAttempt.getId()));
+        SyncAttempt saved = transactionTemplate.execute(status -> syncAttemptRepository.findById(persistedSyncAttempt.getId())).get();
+        assertEquals(JobStatus.FAILED, saved.getAttemptStatus());
+        assertNotNull(saved.getFinishedAt());
     }
 
 }
