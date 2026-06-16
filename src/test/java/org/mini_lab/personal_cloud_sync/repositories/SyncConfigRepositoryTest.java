@@ -1,6 +1,5 @@
 package org.mini_lab.personal_cloud_sync.repositories;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -139,5 +138,20 @@ class SyncConfigRepositoryTest {
         assertTrue(syncConfigRepository.existsSyncConfigBySourcePathAndTargetPath("/source/test/", "/target/test/"));
     }
 
+    @Test
+    void getSyncConfigByIdAndEnabled_whenSyncConfigExist_shouldReturnMatchingSyncConfig() {
+        SyncConfig initialSyncConfig = new SyncConfig();
+        initialSyncConfig.setSourcePath("/source/test/");
+        initialSyncConfig.setTargetPath("/target/test/");
+        SyncConfig persistedSyncConfig = syncConfigRepository.saveAndFlush(initialSyncConfig);
+        Optional<SyncConfig> syncConfigByIdAndEnabled = syncConfigRepository.getSyncConfigByIdAndEnabled(persistedSyncConfig.getId(), Boolean.TRUE);
+        assertEquals(Boolean.TRUE, syncConfigByIdAndEnabled.orElseThrow().getEnabled());
+    }
+
+    @Test
+    void getSyncConfigByIdAndEnabled_whenSyncConfigNotExist_shouldReturnEmpty() {
+        Optional<SyncConfig> syncConfigByIdAndEnabled = syncConfigRepository.getSyncConfigByIdAndEnabled((short) 100, Boolean.TRUE);
+        assertEquals(Optional.empty(), syncConfigByIdAndEnabled);
+    }
 
 }
