@@ -32,7 +32,7 @@ public class SyncJobProcessorService {
         Integer syncJobId = syncJobContext.syncJobId();
         int claimJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.FAILED);
         assertOnlyOneJobClaimed(claimJobCount);
-        syncAttemptRecorder.markFailed(syncJobContext.syncAttemptId(),syncErrorLog);
+        syncAttemptRecorder.markFailed(syncJobContext.syncAttemptId(), syncErrorLog);
     }
 
     @Transactional
