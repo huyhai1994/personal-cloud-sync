@@ -3,11 +3,13 @@ package org.mini_lab.personal_cloud_sync.services;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mini_lab.personal_cloud_sync.component.IRCloneExecutor;
+import org.mini_lab.personal_cloud_sync.component.SyncConfigValidator;
 import org.mini_lab.personal_cloud_sync.dto.RCloneResult;
 import org.mini_lab.personal_cloud_sync.dto.SyncJobContext;
 import org.mini_lab.personal_cloud_sync.enums.SyncErrorCode;
 import org.mini_lab.personal_cloud_sync.enums.SyncErrorLog;
 import org.mini_lab.personal_cloud_sync.exception.InvalidJobStateTransitionException;
+import org.mini_lab.personal_cloud_sync.exception.LocalPathIsNotDirectory;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -28,6 +30,9 @@ class SyncJobProcessorTest {
 
     @Mock
     IRCloneExecutor rCloneExecutor;
+
+    @Mock
+    SyncConfigValidator syncConfigValidator;
 
     @Test
     void whenProcessAlreadyRanJob_thenThrowExceptionAndNeverSync() throws IOException, InterruptedException {
@@ -93,5 +98,35 @@ class SyncJobProcessorTest {
         verify(syncJobProcessorService).markRunning(syncJobId);
         verify(rCloneExecutor).sync(syncJobContext);
         verify(syncJobProcessorService).markFailed(syncJobContext, syncErrorLog);
+    }
+
+    @Test
+    void whenValidateFail_thenSyncProcessShouldNotCalled() throws IOException, InterruptedException {
+        Integer syncJobId = 100;
+        Integer syncJobAttemptId = 100;
+        String sourcePath = "source/test";
+        String targetPath = "target/test";
+        SyncJobContext syncJobContext = new SyncJobContext(syncJobId, syncJobAttemptId, sourcePath, targetPath);
+
+        when(syncJobProcessorService.markRunning(syncJobId)).thenReturn(syncJobContext);
+        doThrow(new LocalPathIsNotDirectory())
+                .when(syncConfigValidator)
+                .validateSourcePath(sourcePath);        // Act
+        syncJobProcessor.process(syncJobId);
+
+        // Assert
+        verify(syncJobProcessorService).markRunning(syncJobId);
+        verify(syncConfigValidator, never())
+                .validateTargetPath(anyString());
+        verify(rCloneExecutor, never())
+                .sync(any());
+        verify(syncJobProcessorService).markFailed(
+                eq(syncJobContext),
+                argThat(error ->
+                        error.syncErrorCode() == SyncErrorCode.VALIDATION_ERROR
+                )
+        );
+        verify(syncJobProcessorService, never())
+                .markSuccess(any());
     }
 }

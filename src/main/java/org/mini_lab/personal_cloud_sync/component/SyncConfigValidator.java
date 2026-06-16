@@ -34,6 +34,32 @@ public class SyncConfigValidator implements ISyncConfigValidator {
 
     }
 
+    @Override
+    public void validateSourcePath(String sourcePath) {
+        if (PathValidationUtils.isPathNull(sourcePath)) {
+            throw new InvalidPathException("Source Path", "Source Path should not be null");
+        }
+        if (PathValidationUtils.isPathBlank(sourcePath)) {
+            throw new InvalidPathException("Source Path", "Source Path should not be blank");
+        }
+        if (!PathValidationUtils.pathIsExits(sourcePath)) {
+            throw new InvalidPathException("Source Path", "Local path does not exist");
+        }
+        if (!PathValidationUtils.pathIsDirectory(sourcePath)) {
+            throw new LocalPathIsNotDirectory();
+        }
+    }
+
+    @Override
+    public void validateTargetPath(String targetPath) {
+        if (PathValidationUtils.isPathNull(targetPath)) {
+            throw new InvalidPathException("Target Path", "Target Path should not be null");
+        }
+        if (PathValidationUtils.isPathBlank(targetPath)) {
+            throw new InvalidPathException("Target Path", "Target Path should not be blank");
+        }
+    }
+
     private static void validateScheduleType(ScheduleType scheduleType, LocalTime runTime, Short scheduleInterval) {
         if (scheduleType == ScheduleType.INTERVAL) {
             if (runTime != null) {
