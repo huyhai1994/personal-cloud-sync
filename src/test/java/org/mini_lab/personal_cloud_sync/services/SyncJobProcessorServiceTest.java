@@ -35,11 +35,11 @@ class SyncJobProcessorServiceTest {
     @Test
     void whenUpdatedFail_fromPendingToRunningState_shouldThrowInvalidJobStateTransitionException() {
         Integer syncJobId = 100;
-        when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.RUNNING)).thenReturn(0);
+        when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.SUBMITTED, JobStatus.RUNNING)).thenReturn(0);
         assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markRunning(syncJobId));
         verify(syncJobRepository).updateStatusIfCurrentStatus(
                 syncJobId,
-                JobStatus.PENDING,
+                JobStatus.SUBMITTED,
                 JobStatus.RUNNING
         );
         verify(syncJobRepository, never()).getSyncJobById(anyInt());
@@ -76,9 +76,9 @@ class SyncJobProcessorServiceTest {
         SyncJob syncJob = new SyncJob();
         syncJob.setId(syncJobId);
         syncJob.setSyncConfig(syncConfig);
-        syncJob.setFinalStatus(JobStatus.PENDING);
+        syncJob.setFinalStatus(JobStatus.SUBMITTED);
 
-        when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.RUNNING)).thenReturn(1);
+        when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.SUBMITTED, JobStatus.RUNNING)).thenReturn(1);
         when(syncJobRepository.getSyncJobById(syncJobId)).thenReturn(Optional.of(syncJob));
         when(syncAttemptRecorder.startAttempt(syncJob)).thenReturn(syncJobAttemptId);
         SyncJobContext syncJobContext = new SyncJobContext(syncJobId, syncJobAttemptId, "/source/test", "/target/test");
