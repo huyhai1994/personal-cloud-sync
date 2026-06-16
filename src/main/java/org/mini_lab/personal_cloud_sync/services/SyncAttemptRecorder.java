@@ -4,12 +4,12 @@ import lombok.RequiredArgsConstructor;
 import org.mini_lab.personal_cloud_sync.entities.SyncAttempt;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
+import org.mini_lab.personal_cloud_sync.enums.SyncErrorLog;
 import org.mini_lab.personal_cloud_sync.repositories.SyncAttemptRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.awt.*;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 
@@ -35,9 +35,11 @@ public class SyncAttemptRecorder {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void markFailed(Integer attemptId) {
+    public void markFailed(Integer attemptId, SyncErrorLog syncErrorLog) {
         SyncAttempt syncAttempt = syncAttemptRepository.findById(attemptId).orElseThrow();
         syncAttempt.setFinishedAt(OffsetDateTime.now(systemClock));
+        syncAttempt.setErrorCode(syncErrorLog.syncErrorCode());
+        syncAttempt.setErrorMessage(syncErrorLog.errorLog());
         syncAttempt.setAttemptStatus(JobStatus.FAILED);
     }
 

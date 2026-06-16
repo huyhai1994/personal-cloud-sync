@@ -5,6 +5,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mini_lab.personal_cloud_sync.component.IRCloneExecutor;
 import org.mini_lab.personal_cloud_sync.dto.RCloneResult;
 import org.mini_lab.personal_cloud_sync.dto.SyncJobContext;
+import org.mini_lab.personal_cloud_sync.enums.SyncErrorCode;
+import org.mini_lab.personal_cloud_sync.enums.SyncErrorLog;
 import org.mini_lab.personal_cloud_sync.exception.InvalidJobStateTransitionException;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -78,6 +80,7 @@ class SyncJobProcessorTest {
         String targetPath = "target/test";
         SyncJobContext syncJobContext = new SyncJobContext(syncJobId, syncJobAttemptId, sourcePath, targetPath);
 
+        SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.SYNC_PROCESS_ERROR, "Rclone process finished with non-zero exit code");
         RCloneResult result = new RCloneResult();
         result.setExitCode(111);
 
@@ -89,6 +92,6 @@ class SyncJobProcessorTest {
         // Assert
         verify(syncJobProcessorService).markRunning(syncJobId);
         verify(rCloneExecutor).sync(syncJobContext);
-        verify(syncJobProcessorService).markFailed(syncJobContext);
+        verify(syncJobProcessorService).markFailed(syncJobContext, syncErrorLog);
     }
 }

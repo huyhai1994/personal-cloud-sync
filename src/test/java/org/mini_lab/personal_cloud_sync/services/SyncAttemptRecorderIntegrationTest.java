@@ -7,6 +7,8 @@ import org.mini_lab.personal_cloud_sync.entities.SyncAttempt;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
+import org.mini_lab.personal_cloud_sync.enums.SyncErrorCode;
+import org.mini_lab.personal_cloud_sync.enums.SyncErrorLog;
 import org.mini_lab.personal_cloud_sync.repositories.SyncAttemptRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
@@ -18,7 +20,6 @@ import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -110,9 +111,11 @@ class SyncAttemptRecorderIntegrationTest {
         assertNotNull(syncAttemptId);
         SyncAttempt persistedSyncAttempt = transactionTemplate.execute(status -> syncAttemptRepository.findById(syncAttemptId).orElseThrow());
         assertNotNull(persistedSyncAttempt.getId());
-        transactionTemplate.executeWithoutResult(status -> syncAttemptRecorder.markFailed(persistedSyncAttempt.getId()));
+        SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.SYNC_PROCESS_ERROR, "Rclone process finished with non-zero exit code");
+        transactionTemplate.executeWithoutResult(status -> syncAttemptRecorder.markFailed(persistedSyncAttempt.getId(), syncErrorLog));
         SyncAttempt saved = transactionTemplate.execute(status -> syncAttemptRepository.findById(persistedSyncAttempt.getId())).get();
         assertEquals(JobStatus.FAILED, saved.getAttemptStatus());
+        assertEquals(SyncErrorCode.SYNC_PROCESS_ERROR, saved.getErrorCode());
         assertNotNull(saved.getFinishedAt());
     }
 

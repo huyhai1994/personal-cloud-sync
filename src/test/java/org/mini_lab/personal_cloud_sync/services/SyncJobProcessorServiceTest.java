@@ -6,6 +6,8 @@ import org.mini_lab.personal_cloud_sync.dto.SyncJobContext;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
+import org.mini_lab.personal_cloud_sync.enums.SyncErrorCode;
+import org.mini_lab.personal_cloud_sync.enums.SyncErrorLog;
 import org.mini_lab.personal_cloud_sync.exception.InvalidJobStateTransitionException;
 import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
 import org.mockito.InjectMocks;
@@ -49,8 +51,9 @@ class SyncJobProcessorServiceTest {
         Integer syncJobId = 100;
         Integer syncJobAttemptId = 100;
         SyncJobContext syncJobContext = new SyncJobContext(syncJobId, syncJobAttemptId, "/source/test", "/target/test");
+        SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.SYNC_PROCESS_ERROR, "Rclone process finished with non-zero exit code");
         when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.FAILED)).thenReturn(0);
-        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markFailed(syncJobContext));
+        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markFailed(syncJobContext, syncErrorLog));
     }
 
     @Test

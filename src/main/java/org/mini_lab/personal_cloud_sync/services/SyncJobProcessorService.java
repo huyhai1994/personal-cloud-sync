@@ -5,6 +5,7 @@ import org.mini_lab.personal_cloud_sync.dto.SyncJobContext;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
+import org.mini_lab.personal_cloud_sync.enums.SyncErrorLog;
 import org.mini_lab.personal_cloud_sync.exception.InvalidJobStateTransitionException;
 import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
 import org.springframework.stereotype.Service;
@@ -27,10 +28,11 @@ public class SyncJobProcessorService {
     }
 
     @Transactional
-    public void markFailed(SyncJobContext syncJobContext) {
+    public void markFailed(SyncJobContext syncJobContext, SyncErrorLog syncErrorLog) {
         Integer syncJobId = syncJobContext.syncJobId();
         int claimJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.FAILED);
         assertOnlyOneJobClaimed(claimJobCount);
+        syncAttemptRecorder.markFailed(syncJobContext.syncAttemptId(),syncErrorLog);
     }
 
     @Transactional
