@@ -13,10 +13,10 @@ public class ExecutorConfig {
     private final ExecutorConfigProperties executorConfigProperties;
 
 
-    @Bean("fixedThreadPool")
+    @Bean("syncJobExecutor")
     public ExecutorService fixedThreadPool() {
         int corePoolSize = executorConfigProperties.getCorePoolSize();
-        int maximumPoolSize= executorConfigProperties.getMaximumPoolSize();
+        int maximumPoolSize = executorConfigProperties.getMaximumPoolSize();
         int queueCapacity = executorConfigProperties.getQueueCapacity();
         long keepAliveTime = executorConfigProperties.getKeepAliveTime();
 
@@ -25,7 +25,8 @@ public class ExecutorConfig {
                 maximumPoolSize,
                 keepAliveTime,
                 TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(queueCapacity)
+                new LinkedBlockingQueue<>(queueCapacity),
+                new ThreadPoolExecutor.AbortPolicy()
         );
     }
 }

@@ -1,6 +1,5 @@
 package org.mini_lab.personal_cloud_sync.aspect;
 
-import org.apache.coyote.Response;
 import org.mini_lab.personal_cloud_sync.dto.ErrorDetail;
 import org.mini_lab.personal_cloud_sync.exception.DuplicateSyncConfigException;
 import org.mini_lab.personal_cloud_sync.exception.InternalServerException;
