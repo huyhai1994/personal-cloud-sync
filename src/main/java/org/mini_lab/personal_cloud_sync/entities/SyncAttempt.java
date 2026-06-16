@@ -3,6 +3,7 @@ package org.mini_lab.personal_cloud_sync.entities;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.mini_lab.personal_cloud_sync.enums.JobStatus;
 import org.mini_lab.personal_cloud_sync.enums.SyncErrorCode;
 
 import java.time.OffsetDateTime;
@@ -22,6 +23,9 @@ public class SyncAttempt {
 
     @Column(name = "start_at")
     private OffsetDateTime startAt;
+
+    @Column(name = "attempt_status")
+    private JobStatus attemptStatus;
 
     @Column(name = "finished_at")
     private OffsetDateTime finishedAt;

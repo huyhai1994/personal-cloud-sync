@@ -3,6 +3,7 @@ package org.mini_lab.personal_cloud_sync.component;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mini_lab.personal_cloud_sync.dto.RCloneResult;
+import org.mini_lab.personal_cloud_sync.dto.SyncJobContext;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -17,7 +18,9 @@ public class OneDriveRCloneExecutor implements IRCloneExecutor {
     private final RCloneCommandExecutor rCloneCommandExecutor;
 
     @Override
-    public RCloneResult sync(String sourcePath, String targetPath) throws IOException, InterruptedException {
+    public RCloneResult sync(SyncJobContext syncJobContext) throws IOException, InterruptedException {
+        String targetPath = syncJobContext.targetPath();
+        String sourcePath = syncJobContext.sourcePath();
         targetPath = oneDrivePathResolver.normalizePath(targetPath);
         List<String> command = rcloneCommandBuilder.command(sourcePath, targetPath);
         return rCloneCommandExecutor.executeCommand(command);

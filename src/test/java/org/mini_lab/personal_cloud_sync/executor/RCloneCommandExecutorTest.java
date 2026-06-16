@@ -64,7 +64,7 @@ class RCloneCommandExecutorTest {
 
         when(rCloneProperties.getTimeOutSecond()).thenReturn(5);
         RCloneResult result = rCloneCommandExecutor.executeCommand(
-                List.of("bash", "-c", "sleep 10")
+                List.of("bash", "-c", "sleep 7")
         );
 
         assertEquals(-1, result.getExitCode());
