@@ -16,8 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 
@@ -31,6 +30,30 @@ class SyncJobProcessorServiceTest {
 
     @InjectMocks
     SyncJobProcessorService syncJobProcessorService;
+
+    @Test
+    void whenUpdatedFail_fromPendingToSubmitFail_shouldThrowInvalidJobStateTransitionException() {
+        Integer syncJobId = 100;
+        when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.SUBMIT_FAILED)).thenReturn(0);
+        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markSubmitFailed(syncJobId));
+        verify(syncJobRepository).updateStatusIfCurrentStatus(
+                syncJobId,
+                JobStatus.PENDING,
+                JobStatus.SUBMIT_FAILED
+        );
+    }
+
+    @Test
+    void whenUpdatedSuccess_fromPendingToSubmitFail_shouldNotThrow() {
+        Integer syncJobId = 100;
+        when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.SUBMIT_FAILED)).thenReturn(1);
+        assertDoesNotThrow(() -> syncJobProcessorService.markSubmitFailed(syncJobId));
+        verify(syncJobRepository).updateStatusIfCurrentStatus(
+                syncJobId,
+                JobStatus.PENDING,
+                JobStatus.SUBMIT_FAILED
+        );
+    }
 
     @Test
     void whenUpdatedFail_fromPendingToRunningState_shouldThrowInvalidJobStateTransitionException() {
