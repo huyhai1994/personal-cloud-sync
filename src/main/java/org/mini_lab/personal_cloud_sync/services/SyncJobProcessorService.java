@@ -19,7 +19,7 @@ public class SyncJobProcessorService {
 
     @Transactional
     public SyncJobContext markRunning(Integer syncJobId) {
-        int claimedJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.RUNNING);
+        int claimedJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.SUBMITTED, JobStatus.RUNNING);
         assertOnlyOneJobClaimed(claimedJobCount);
         SyncJob syncJob = syncJobRepository.getSyncJobById(syncJobId).orElseThrow();
         SyncConfig syncConfig = syncJob.getSyncConfig();
@@ -44,11 +44,21 @@ public class SyncJobProcessorService {
         syncAttemptRecorder.markSuccess(syncAttemptId);
     }
 
+    @Transactional
+    public void markSubmitFailed(Integer syncJobId) {
+        int claimedJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.SUBMIT_FAILED);
+        assertOnlyOneJobClaimed(claimedJobCount);
+    }
+
     private void assertOnlyOneJobClaimed(int numberOfJobClaimed) {
         if (numberOfJobClaimed != 1) {
             throw new InvalidJobStateTransitionException();
         }
     }
 
-
+    @Transactional
+    public void markSubmitted(Integer syncJobId) {
+        int claimedJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.SUBMITTED);
+        assertOnlyOneJobClaimed(claimedJobCount);
+    }
 }

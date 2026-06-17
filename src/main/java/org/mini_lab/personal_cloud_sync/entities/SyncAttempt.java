@@ -24,6 +24,7 @@ public class SyncAttempt {
     @Column(name = "start_at")
     private OffsetDateTime startAt;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "attempt_status")
     private JobStatus attemptStatus;
 
