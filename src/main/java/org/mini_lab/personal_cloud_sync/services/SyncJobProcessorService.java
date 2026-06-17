@@ -56,6 +56,7 @@ public class SyncJobProcessorService {
         }
     }
 
+    @Transactional
     public void markSubmitted(Integer syncJobId) {
         int claimedJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.SUBMITTED);
         assertOnlyOneJobClaimed(claimedJobCount);
