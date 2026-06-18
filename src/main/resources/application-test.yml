@@ -1,6 +1,6 @@
 spring:
   application:
-    name: personal_cloud_sync_dev
+    name: personal_cloud_sync_test
   datasource:
     url: jdbc:mysql://localhost:3306/personal_sync_db_test
     username: root
