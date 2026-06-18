@@ -2,6 +2,8 @@ package org.mini_lab.personal_cloud_sync;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +12,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.nio.file.Path;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -29,6 +33,13 @@ class PersonalCloudSyncApplicationTests {
 
     @Autowired
     private SyncJobRepository syncJobRepository;
+
+    @TempDir
+    Path sourcePath;
+
+    @TempDir
+    Path targetPath;
+
 
     @BeforeEach
     void setUp() {
@@ -50,6 +61,18 @@ class PersonalCloudSyncApplicationTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
                         .value("Maximum Retry Count Exceed should less or equal 5"));
+    }
+
+    @Test
+    void createManualSyncJob_whenSyncConfigNotExists_shouldReturn404() throws Exception {
+
+        short notExistsSyncConfigId = 999;
+
+        mockMvc.perform(post("/sync-config/{id}/sync-jobs/manual", notExistsSyncConfigId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message")
+                        .value("Sync Config not found!"));
     }
 
     @Test

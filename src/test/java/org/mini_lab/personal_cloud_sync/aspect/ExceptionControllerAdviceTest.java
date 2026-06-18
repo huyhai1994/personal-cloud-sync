@@ -2,13 +2,11 @@ package org.mini_lab.personal_cloud_sync.aspect;
 
 import org.junit.jupiter.api.Test;
 import org.mini_lab.personal_cloud_sync.dto.ErrorDetail;
-import org.mini_lab.personal_cloud_sync.exception.DuplicateSyncConfigException;
-import org.mini_lab.personal_cloud_sync.exception.InternalServerException;
-import org.mini_lab.personal_cloud_sync.exception.LocalPathIsNotDirectory;
-import org.mini_lab.personal_cloud_sync.exception.MaximumRetryCountExceedException;
+import org.mini_lab.personal_cloud_sync.exception.*;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -68,6 +66,15 @@ class ExceptionControllerAdviceTest {
                 handler.handleInternalServerException(ex);
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         assertEquals("Unexpected server error", response.getBody().getMessage());
+    }
+
+    @Test
+    void handle_config_not_found_exception_should_return_404() {
+        SyncConfigNotFoundException syncConfigNotFoundException = new SyncConfigNotFoundException();
+        ResponseEntity<ErrorDetail> response =
+                handler.handleNotFoundRequest(syncConfigNotFoundException);
+        assertEquals("Sync Config not found!", Objects.requireNonNull(response.getBody()).getMessage());
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
 
     private void assertBadRequest(

@@ -1,16 +1,16 @@
 package org.mini_lab.personal_cloud_sync.aspect;
 
+import lombok.extern.slf4j.Slf4j;
 import org.mini_lab.personal_cloud_sync.dto.ErrorDetail;
-import org.mini_lab.personal_cloud_sync.exception.DuplicateSyncConfigException;
-import org.mini_lab.personal_cloud_sync.exception.InternalServerException;
-import org.mini_lab.personal_cloud_sync.exception.LocalPathIsNotDirectory;
-import org.mini_lab.personal_cloud_sync.exception.MaximumRetryCountExceedException;
+import org.mini_lab.personal_cloud_sync.exception.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.nio.file.InvalidPathException;
 
+@Slf4j
 @RestControllerAdvice
 public class ExceptionControllerAdvice {
     @ExceptionHandler({
@@ -25,6 +25,16 @@ public class ExceptionControllerAdvice {
         errorDetail.setMessage(ex.getMessage());
 
         return ResponseEntity.badRequest().body(errorDetail);
+    }
+
+    @ExceptionHandler({
+            SyncConfigNotFoundException.class
+    })
+    public ResponseEntity<ErrorDetail> handleNotFoundRequest(Exception ex) {
+        ErrorDetail errorDetail = new ErrorDetail();
+        errorDetail.setMessage(ex.getMessage());
+        log.warn("RESPONSE_RETURNED httpStatus={} message={}", HttpStatus.NOT_FOUND, errorDetail.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorDetail);
     }
 
     @ExceptionHandler(InvalidPathException.class)
