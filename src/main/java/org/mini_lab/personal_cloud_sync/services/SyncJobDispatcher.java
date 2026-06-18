@@ -25,6 +25,7 @@ public class SyncJobDispatcher {
         try {
             Map<String, String> contextMap = MDC.getCopyOfContextMap();
             log.info("SYNC_JOB_DISPATCHED syncJobId={}", syncJobId);
+            syncJobProcessorService.markSubmitted(syncJobId);
             syncJobExecutor.submit(() -> {
                 if (contextMap != null) {
                     MDC.setContextMap(contextMap);
@@ -32,7 +33,6 @@ public class SyncJobDispatcher {
                 MDC.put("syncJobId", syncJobId.toString());
                 syncJobProcessor.process(syncJobId);
             });
-            syncJobProcessorService.markSubmitted(syncJobId);
         } catch (RejectedExecutionException e) {
             syncJobProcessorService.markSubmitFailed(syncJobId);
         }
