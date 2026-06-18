@@ -25,6 +25,7 @@ public class OneDriveRCloneExecutor implements IRCloneExecutor {
         String sourcePath = syncJobContext.sourcePath();
         targetPath = oneDrivePathResolver.normalizePath(targetPath);
         List<String> command = rcloneCommandBuilder.command(sourcePath, targetPath);
+        log.info("RCLONE_STARTED  command={}", command);
         return rCloneCommandExecutor.executeCommand(command);
     }
 }

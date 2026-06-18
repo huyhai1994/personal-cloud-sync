@@ -1,6 +1,7 @@
 package org.mini_lab.personal_cloud_sync.component;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.mini_lab.personal_cloud_sync.configuration.RCloneProperties;
 import org.mini_lab.personal_cloud_sync.dto.RCloneResult;
 import org.springframework.stereotype.Component;
