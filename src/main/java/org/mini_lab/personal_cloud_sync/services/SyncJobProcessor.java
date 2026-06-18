@@ -1,6 +1,7 @@
 package org.mini_lab.personal_cloud_sync.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.mini_lab.personal_cloud_sync.component.IRCloneExecutor;
 import org.mini_lab.personal_cloud_sync.component.SyncConfigValidator;
 import org.mini_lab.personal_cloud_sync.dto.RCloneResult;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.file.InvalidPathException;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SyncJobProcessor {
@@ -21,10 +23,13 @@ public class SyncJobProcessor {
     private final SyncConfigValidator syncConfigValidator;
 
     public void process(Integer syncJobId) {
+        log.info("SYNC_JOB_PROCESS_STARTED");
         SyncJobContext syncJobContext = syncJobProcessorService.markRunning(syncJobId);
         try {
             validate(syncJobContext);
             RCloneResult rCloneResult = rCloneExecutor.sync(syncJobContext);
+            log.info("RCLONE_FINISHED exitCode={} errorMessage={}",
+                    rCloneResult.getExitCode(), rCloneResult.getErrorMessage());
             if (rCloneResult.isSuccess()) {
                 syncJobProcessorService.markSuccess(syncJobContext);
             } else {

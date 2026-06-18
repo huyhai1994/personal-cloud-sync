@@ -31,7 +31,9 @@
             </labels>
 
             <message>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg %ex{10}</pattern>
+                <pattern>
+                    %d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %X{correlationId} %logger{36} - %msg %ex{10}
+                </pattern>
             </message>
             <batch>
                 <maxItems>100</maxItems>

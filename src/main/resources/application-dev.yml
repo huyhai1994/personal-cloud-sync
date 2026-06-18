@@ -13,3 +13,11 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: true
+
+rclone:
+  timeout-second: 3600
+executor-config:
+  core-pool-size: 5
+  keep-alive-time: 0
+  queue-capacity: 100
+  maximum-pool-size: 10
