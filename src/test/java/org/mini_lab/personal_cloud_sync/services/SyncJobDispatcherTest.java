@@ -6,8 +6,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.task.TaskExecutor;
 
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -19,7 +19,7 @@ class SyncJobDispatcherTest {
     SyncJobDispatcher syncJobDispatcher;
 
     @Mock
-    ExecutorService syncJobExecutor;
+    TaskExecutor syncJobExecutor;
 
     @Mock
     SyncJobProcessor syncJobProcessor;
@@ -34,16 +34,16 @@ class SyncJobDispatcherTest {
 
         doThrow(new RejectedExecutionException())
                 .when(syncJobExecutor)
-                .submit(any(Runnable.class));
+                .execute(any(Runnable.class));
 
         // Act
         syncJobDispatcher.dispatch(syncJobId);
 
         // Assert
-        verify(syncJobExecutor).submit(any(Runnable.class));
+        verify(syncJobProcessorService).markSubmitted(syncJobId);
+        verify(syncJobExecutor).execute(any(Runnable.class));
         verify(syncJobProcessorService).markSubmitFailed(syncJobId);
         verify(syncJobProcessor, never()).process(any());
-        verify(syncJobProcessorService, never()).markSubmitted(any());
     }
 
     @Test
@@ -57,7 +57,7 @@ class SyncJobDispatcherTest {
         syncJobDispatcher.dispatch(syncJobId);
 
         // Assert
-        verify(syncJobExecutor).submit(taskCaptor.capture());
+        verify(syncJobExecutor).execute(taskCaptor.capture());
 
         Runnable task = taskCaptor.getValue();
         task.run();
