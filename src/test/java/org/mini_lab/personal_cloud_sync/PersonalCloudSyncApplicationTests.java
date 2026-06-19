@@ -4,6 +4,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.entities.SyncAttempt;
+import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
+import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 import org.mini_lab.personal_cloud_sync.repositories.SyncAttemptRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
@@ -15,7 +17,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.file.Path;
+import java.time.LocalTime;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -33,6 +37,9 @@ class PersonalCloudSyncApplicationTests {
 
     @Autowired
     private SyncJobRepository syncJobRepository;
+
+    @Autowired
+    private SyncAttemptRepository syncAttemptRepository;
 
     @TempDir
     Path sourcePath;
@@ -320,7 +327,7 @@ class PersonalCloudSyncApplicationTests {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
-                .value("Sync config already exists"));
+                        .value("Sync config already exists"));
     }
 
     @Test
@@ -366,5 +373,41 @@ class PersonalCloudSyncApplicationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(intervalRequest))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void createSyncConfig_whenScheduleTypeInterval_shouldPersistInterval() throws Exception {
+        String requestBody = requestBodyWithSchedule("""
+                "scheduleType":"INTERVAL",
+                "scheduleInterval":20
+                """);
+
+        mockMvc.perform(post("/sync-config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isCreated());
+
+        SyncConfig syncConfig = syncConfigRepository.findAll().get(0);
+
+        assertThat(syncConfig.getScheduleType()).isEqualTo(ScheduleType.INTERVAL);
+        assertThat(syncConfig.getScheduleInterval()).isEqualTo((short) 20);
+    }
+
+    @Test
+    void createSyncConfig_whenScheduleTypeDaily_shouldPersistDaily() throws Exception {
+        String requestBody = requestBodyWithSchedule("""
+                "scheduleType":"DAILY",
+                "runTime":"10:00"
+                """);
+
+        mockMvc.perform(post("/sync-config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isCreated());
+
+        SyncConfig syncConfig = syncConfigRepository.findAll().get(0);
+
+        assertThat(syncConfig.getScheduleType()).isEqualTo(ScheduleType.DAILY);
+        assertThat(syncConfig.getRunTime()).isEqualTo(LocalTime.of(10, 0));
     }
 }
