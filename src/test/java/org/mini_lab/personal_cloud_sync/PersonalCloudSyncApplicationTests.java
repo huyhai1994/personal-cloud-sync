@@ -3,7 +3,6 @@ package org.mini_lab.personal_cloud_sync;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +17,6 @@ import java.nio.file.Path;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -40,24 +38,44 @@ class PersonalCloudSyncApplicationTests {
     @TempDir
     Path targetPath;
 
-
     @BeforeEach
     void setUp() {
         syncJobRepository.deleteAll();
         syncConfigRepository.deleteAll();
     }
 
+    private String validRequestBody() {
+        return """
+                {
+                  "sourcePath": "%s",
+                  "targetPath": "%s"
+                }
+                """.formatted(sourcePath.toString(), targetPath.toString());
+    }
+
+    private String requestBodyWithSchedule(String scheduleFields) {
+        return """
+                {
+                  "sourcePath": "%s",
+                  "targetPath": "%s",
+                  %s
+                }
+                """.formatted(sourcePath.toString(), targetPath.toString(), scheduleFields);
+    }
+
     @Test
     void create_sync_config_when_max_retry_exceeded_should_return_400() throws Exception {
+        String requestBody = """
+                {
+                  "sourcePath": "%s",
+                  "targetPath": "%s",
+                  "maxRetry": 10
+                }
+                """.formatted(sourcePath.toString(), targetPath.toString());
+
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "sourcePath": "/source/test",
-                                  "targetPath": "/target/test",
-                                  "maxRetry": 10
-                                }
-                                """))
+                        .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
                         .value("Maximum Retry Count Exceed should less or equal 5"));
@@ -65,7 +83,6 @@ class PersonalCloudSyncApplicationTests {
 
     @Test
     void createManualSyncJob_whenSyncConfigNotExists_shouldReturn404() throws Exception {
-
         short notExistsSyncConfigId = 999;
 
         mockMvc.perform(post("/sync-config/{id}/sync-jobs/manual", notExistsSyncConfigId)
@@ -160,27 +177,17 @@ class PersonalCloudSyncApplicationTests {
     void create_sync_config_should_return_201() throws Exception {
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "sourcePath": "/home/huyhai1994/workspace/backend-notes",
-                                  "targetPath": "/workspace/backend-notes"
-                                }
-                                """))
+                        .content(validRequestBody()))
                 .andExpect(status().isCreated());
     }
 
     @Test
     void create_sync_config_schedule_type_interval_runtime_not_null_should_return_400() throws Exception {
+        String requestBody = requestBodyWithSchedule("""
+                "scheduleType":"INTERVAL",
+                "runTime":"10:00"
+                """);
 
-        String requestBody =
-                """
-                        {
-                          "sourcePath": "/home/huyhai1994/workspace/backend-notes",
-                          "targetPath": "/workspace/backend-notes",
-                          "scheduleType":"INTERVAL",
-                          "runTime":"10:00"
-                        }
-                        """;
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
@@ -191,16 +198,11 @@ class PersonalCloudSyncApplicationTests {
     }
 
     @Test
-    void create_sync_config_schedule_type_scheduleInterval__null_should_return_400() throws Exception {
+    void create_sync_config_schedule_type_scheduleInterval_null_should_return_400() throws Exception {
+        String requestBody = requestBodyWithSchedule("""
+                "scheduleType":"INTERVAL"
+                """);
 
-        String requestBody =
-                """
-                        {
-                          "sourcePath": "/home/huyhai1994/workspace/backend-notes",
-                          "targetPath": "/workspace/backend-notes",
-                          "scheduleType":"INTERVAL"
-                        }
-                        """;
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
@@ -211,37 +213,28 @@ class PersonalCloudSyncApplicationTests {
     }
 
     @Test
-    void create_sync_config_schedule_type_scheduleInterval__lessThan0_shouldReturn400() throws Exception {
+    void create_sync_config_schedule_type_scheduleInterval_lessThan0_shouldReturn400() throws Exception {
+        String negativeIntervalRequest = requestBodyWithSchedule("""
+                "scheduleType":"INTERVAL",
+                "scheduleInterval":-1
+                """);
 
-        String requestBody =
-                """
-                        {
-                          "sourcePath": "/home/huyhai1994/workspace/backend-notes",
-                          "targetPath": "/workspace/backend-notes",
-                          "scheduleType":"INTERVAL",
-                          "scheduleInterval":-1
-                        }
-                        """;
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
+                        .content(negativeIntervalRequest))
                 .andDo(print())
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
                         .value("scheduleInterval must be greater than 0"));
 
-        requestBody =
-                """
-                        {
-                          "sourcePath": "/home/huyhai1994/workspace/backend-notes",
-                          "targetPath": "/workspace/backend-notes",
-                          "scheduleType":"INTERVAL",
-                          "scheduleInterval":0
-                        }
-                        """;
+        String zeroIntervalRequest = requestBodyWithSchedule("""
+                "scheduleType":"INTERVAL",
+                "scheduleInterval":0
+                """);
+
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
+                        .content(zeroIntervalRequest))
                 .andDo(print())
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
@@ -250,16 +243,11 @@ class PersonalCloudSyncApplicationTests {
 
     @Test
     void create_sync_config_schedule_type_scheduleInterval_shouldReturn201() throws Exception {
+        String requestBody = requestBodyWithSchedule("""
+                "scheduleType":"INTERVAL",
+                "scheduleInterval":30
+                """);
 
-        String requestBody =
-                """
-                        {
-                          "sourcePath": "/home/huyhai1994/workspace/backend-notes",
-                          "targetPath": "/workspace/backend-notes",
-                          "scheduleType":"INTERVAL",
-                          "scheduleInterval":30
-                        }
-                        """;
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
@@ -269,15 +257,10 @@ class PersonalCloudSyncApplicationTests {
 
     @Test
     void createSyncConfig_scheduleType_daily_shouldReturn400_whenRuntimeNull() throws Exception {
+        String requestBody = requestBodyWithSchedule("""
+                "scheduleType":"DAILY"
+                """);
 
-        String requestBody =
-                """
-                        {
-                          "sourcePath": "/home/huyhai1994/workspace/backend-notes",
-                          "targetPath": "/workspace/backend-notes",
-                          "scheduleType":"DAILY"
-                        }
-                        """;
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
@@ -289,17 +272,12 @@ class PersonalCloudSyncApplicationTests {
 
     @Test
     void createSyncConfig_scheduleType_daily_shouldReturn400_whenScheduleIntervalNotNull() throws Exception {
+        String requestBody = requestBodyWithSchedule("""
+                "scheduleType":"DAILY",
+                "runTime":"10:00",
+                "scheduleInterval":30
+                """);
 
-        String requestBody =
-                """
-                        {
-                          "sourcePath": "/home/huyhai1994/workspace/backend-notes",
-                          "targetPath": "/workspace/backend-notes",
-                          "scheduleType":"DAILY",
-                          "runTime":"10:00",
-                          "scheduleInterval":30
-                        }
-                        """;
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
@@ -311,16 +289,11 @@ class PersonalCloudSyncApplicationTests {
 
     @Test
     void createSyncConfig_scheduleType_daily_shouldReturn201() throws Exception {
+        String requestBody = requestBodyWithSchedule("""
+                "scheduleType":"DAILY",
+                "runTime":"10:00"
+                """);
 
-        String requestBody =
-                """
-                        {
-                          "sourcePath": "/home/huyhai1994/workspace/backend-notes",
-                          "targetPath": "/workspace/backend-notes",
-                          "scheduleType":"DAILY",
-                          "runTime":"10:00"
-                        }
-                        """;
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
