@@ -20,8 +20,8 @@ import java.time.OffsetDateTime;
 @Table(name = "sync_config",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_sync_config_source_target_path",
-                        columnNames = {"source_path", "target_path"}
+                        name = "uk_sync_config_source_target_path_scheduletype",
+                        columnNames = {"source_path", "target_path", "schedule_type"}
                 )
         })
 public class SyncConfig {

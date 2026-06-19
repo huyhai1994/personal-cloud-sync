@@ -7,6 +7,7 @@ import org.mini_lab.personal_cloud_sync.component.ISyncConfigValidator;
 import org.mini_lab.personal_cloud_sync.component.SyncConfigMapper;
 import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
+import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 import org.mini_lab.personal_cloud_sync.exception.DuplicateSyncConfigException;
 import org.mini_lab.personal_cloud_sync.exception.InternalServerException;
 import org.mini_lab.personal_cloud_sync.exception.LocalPathIsNotDirectory;
@@ -175,6 +176,7 @@ class SyncConfigServiceTest {
         CreateSyncConfigRequest request = new CreateSyncConfigRequest();
         request.setSourcePath(sourcePath.toString());
         request.setTargetPath(targetPath.toString());
+        request.setScheduleType(ScheduleType.MANUAL);
 
         doThrow(new DuplicateSyncConfigException())
                 .when(syncConfigValidator)

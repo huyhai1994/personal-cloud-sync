@@ -3,6 +3,8 @@ package org.mini_lab.personal_cloud_sync;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mini_lab.personal_cloud_sync.entities.SyncAttempt;
+import org.mini_lab.personal_cloud_sync.repositories.SyncAttemptRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,9 @@ class PersonalCloudSyncApplicationTests {
     @Autowired
     private SyncJobRepository syncJobRepository;
 
+    @Autowired
+    private SyncAttemptRepository syncAttemptRepository;
+
     @TempDir
     Path sourcePath;
 
@@ -40,8 +45,9 @@ class PersonalCloudSyncApplicationTests {
 
     @BeforeEach
     void setUp() {
-        syncJobRepository.deleteAll();
-        syncConfigRepository.deleteAll();
+        syncAttemptRepository.deleteAllInBatch();
+        syncJobRepository.deleteAllInBatch();
+        syncConfigRepository.deleteAllInBatch();
     }
 
     private String validRequestBody() {
@@ -299,5 +305,24 @@ class PersonalCloudSyncApplicationTests {
                         .content(requestBody))
                 .andDo(print())
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void createSyncConfig_whenDuplicateSyncConfig_ShouldReturn400() throws Exception {
+        String requestBody = requestBodyWithSchedule("""
+                "scheduleType":"DAILY",
+                "runTime":"10:00"
+                """);
+        mockMvc.perform(post("/sync-config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/sync-config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                .value("Sync config already exists"));
     }
 }

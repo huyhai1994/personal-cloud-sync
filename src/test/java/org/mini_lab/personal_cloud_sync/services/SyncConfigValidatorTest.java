@@ -128,10 +128,12 @@ class SyncConfigValidatorTest {
         CreateSyncConfigRequest request = new CreateSyncConfigRequest();
         request.setSourcePath(sourcePath.toString());
         request.setTargetPath(targetPath.toString());
+        request.setScheduleType(ScheduleType.MANUAL);
 
-        when(syncConfigRepository.existsSyncConfigBySourcePathAndTargetPath(
+        when(syncConfigRepository.existsSyncConfigBySourcePathAndTargetPathAndScheduleType(
                 sourcePath.toString(),
-                targetPath.toString()
+                targetPath.toString(),
+                ScheduleType.MANUAL
         )).thenReturn(true); //Nó giả lập repo trả lời rằng config đã tồn tại.
 
         // when & then

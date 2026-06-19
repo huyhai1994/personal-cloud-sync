@@ -29,7 +29,7 @@ public class SyncConfigValidator implements ISyncConfigValidator {
 
         validateMaximumRetryCount(maximumRetryCount);
         validatePath(sourcePath, targetPath);
-        validateIfSourceAndTargetPathExisted(sourcePath, targetPath);
+        validateIfSourceAndTargetPathAndScheduleTypeExisted(sourcePath, targetPath, scheduleType);
         validateScheduleType(scheduleType, runTime, scheduleInterval);
 
     }
@@ -84,8 +84,8 @@ public class SyncConfigValidator implements ISyncConfigValidator {
         }
     }
 
-    private void validateIfSourceAndTargetPathExisted(String sourcePath, String targetPath) {
-        if (syncConfigRepository.existsSyncConfigBySourcePathAndTargetPath(sourcePath, targetPath)) {
+    private void validateIfSourceAndTargetPathAndScheduleTypeExisted(String sourcePath, String targetPath, ScheduleType scheduleType) {
+        if (syncConfigRepository.existsSyncConfigBySourcePathAndTargetPathAndScheduleType(sourcePath, targetPath, scheduleType)) {
             throw new DuplicateSyncConfigException();
         }
     }

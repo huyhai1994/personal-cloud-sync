@@ -2,6 +2,7 @@ package org.mini_lab.personal_cloud_sync.repositories;
 
 import jakarta.persistence.LockModeType;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
+import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -20,4 +21,5 @@ public interface SyncConfigRepository extends JpaRepository<SyncConfig, Short> {
 
     boolean existsSyncConfigBySourcePathAndTargetPath(String sourcePath, String targetPath);
 
+    boolean existsSyncConfigBySourcePathAndTargetPathAndScheduleType(String sourcePath, String targetPath, ScheduleType scheduleType);
 }
