@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ManualSyncJobService {
+public class SyncJobService {
     private final SyncJobDispatcher syncJobDispatcher;
     private final SyncJobCreationService syncJobCreationService;
 

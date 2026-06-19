@@ -5,7 +5,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.dto.SyncJobResponse;
-import org.mini_lab.personal_cloud_sync.entities.SyncAttempt;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
 import org.mini_lab.personal_cloud_sync.repositories.SyncAttemptRepository;
@@ -30,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ManualSyncJobServiceIntegrationTest {
     @Autowired
-    private ManualSyncJobService manualSyncJobService;
+    private SyncJobService manualSyncJobService;
 
     @TempDir
     Path sourcePath;

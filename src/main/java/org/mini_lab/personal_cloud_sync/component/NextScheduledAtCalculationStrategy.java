@@ -7,6 +7,8 @@ import java.time.*;
 import java.util.Optional;
 
 public class NextScheduledAtCalculationStrategy {
+    private NextScheduledAtCalculationStrategy() {
+    }
 
     public static Optional<OffsetDateTime> estimateNextScheduledAt(NextScheduledAtRequest nextScheduledAtRequest, Clock clock) {
         ScheduleType scheduleType = nextScheduledAtRequest.getScheduleType();
