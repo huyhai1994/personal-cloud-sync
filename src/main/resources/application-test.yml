@@ -31,3 +31,5 @@ executor-config:
   keep-alive-time: 0
   queue-capacity: 100
   maximum-pool-size: 10
+sync-job-scheduler:
+  polling-time: 10
