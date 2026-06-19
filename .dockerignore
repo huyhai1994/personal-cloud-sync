@@ -1,0 +1,6 @@
+.git
+.idea
+target/*
+!target/*.jar
+*.log
+.DS_Store

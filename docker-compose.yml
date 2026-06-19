@@ -1,0 +1,17 @@
+services:
+  personal-cloud-sync:
+    image: ${REGISTRY_HOST}/personal-cloud-sync:${IMAGE_TAG}
+    container_name: personal-cloud-sync
+    ports:
+      - "20000:20000"
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 20000
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE_ACTIVE:-dev}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge
