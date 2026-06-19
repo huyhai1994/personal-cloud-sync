@@ -37,6 +37,7 @@ public class SyncConfigMapper {
         SyncConfig syncConfig = new SyncConfig();
         syncConfig.setSourcePath(sourcePath);
         syncConfig.setTargetPath(targetPath);
+        syncConfig.setScheduleType(scheduleType);
         syncConfig.setMaxRetry(maxRetry);
         nextScheduledAt.ifPresent(syncConfig::setNextScheduledAt);
         return syncConfig;

@@ -1,11 +1,13 @@
 package org.mini_lab.personal_cloud_sync.component;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
 import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 import org.mini_lab.personal_cloud_sync.exception.DuplicateSyncConfigException;
 import org.mini_lab.personal_cloud_sync.exception.LocalPathIsNotDirectory;
 import org.mini_lab.personal_cloud_sync.exception.MaximumRetryCountExceedException;
+import org.mini_lab.personal_cloud_sync.exception.SyncJobAlreadyRunningException;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.util.PathValidationUtils;
 import org.springframework.stereotype.Component;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Component;
 import java.nio.file.InvalidPathException;
 import java.time.LocalTime;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class SyncConfigValidator implements ISyncConfigValidator {
@@ -85,9 +88,18 @@ public class SyncConfigValidator implements ISyncConfigValidator {
     }
 
     private void validateIfSourceAndTargetPathAndScheduleTypeExisted(String sourcePath, String targetPath, ScheduleType scheduleType) {
-        if (syncConfigRepository.existsSyncConfigBySourcePathAndTargetPathAndScheduleType(sourcePath, targetPath, scheduleType)) {
-            throw new DuplicateSyncConfigException();
-        }
+        log.info("CHECK_DUPLICATE sourcePath={}, targetPath={}, scheduleType={}",
+                sourcePath, targetPath, scheduleType);
+        log.info("CHECK_DUPLICATE sourcePath={}, targetPath={}, scheduleType={}",
+                sourcePath, targetPath, scheduleType);
+
+        boolean exists = syncConfigRepository
+                .existsSyncConfigBySourcePathAndTargetPathAndScheduleType(
+                        sourcePath, targetPath, scheduleType
+                );
+
+        log.info("CHECK_DUPLICATE_RESULT exists={}", exists);
+        if (Boolean.TRUE.equals(exists)) throw new DuplicateSyncConfigException();
     }
 
     private static void validatePath(String sourcePath, String targetPath) {

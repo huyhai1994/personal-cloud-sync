@@ -34,9 +34,6 @@ class PersonalCloudSyncApplicationTests {
     @Autowired
     private SyncJobRepository syncJobRepository;
 
-    @Autowired
-    private SyncAttemptRepository syncAttemptRepository;
-
     @TempDir
     Path sourcePath;
 
@@ -324,5 +321,50 @@ class PersonalCloudSyncApplicationTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
                 .value("Sync config already exists"));
+    }
+
+    @Test
+    void createSyncConfig_sameSourceTargetAndSameScheduleType_shouldReturn400() throws Exception {
+
+        String requestBody = requestBodyWithSchedule("""
+                "scheduleType":"DAILY",
+                "runTime":"10:00"
+                """);
+
+        mockMvc.perform(post("/sync-config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/sync-config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("Sync config already exists"));
+    }
+
+    @Test
+    void createSyncConfig_sameSourceTargetButDifferentScheduleType_shouldReturn201() throws Exception {
+
+        String dailyRequest = requestBodyWithSchedule("""
+                "scheduleType":"DAILY",
+                "runTime":"10:00"
+                """);
+
+        String intervalRequest = requestBodyWithSchedule("""
+                "scheduleType":"INTERVAL",
+                "scheduleInterval":20
+                """);
+
+        mockMvc.perform(post("/sync-config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(dailyRequest))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/sync-config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(intervalRequest))
+                .andExpect(status().isCreated());
     }
 }
