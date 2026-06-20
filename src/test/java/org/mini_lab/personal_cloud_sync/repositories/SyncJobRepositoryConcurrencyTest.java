@@ -5,11 +5,16 @@ import org.junit.jupiter.api.Test;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
+import org.mini_lab.personal_cloud_sync.support.AbstractIntegrationTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Objects;
 import java.util.concurrent.*;
@@ -20,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class SyncJobRepositoryConcurrencyTest {
+class SyncJobRepositoryConcurrencyTest extends AbstractIntegrationTest {
 
     @Autowired
     private SyncJobRepository syncJobRepository;

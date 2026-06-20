@@ -6,10 +6,10 @@ import org.mini_lab.personal_cloud_sync.entities.SyncAttempt;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
+import org.mini_lab.personal_cloud_sync.support.AbstractIntegrationTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -20,9 +20,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
-@ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class SyncAttemptRepositoryTest {
+class SyncAttemptRepositoryTest extends AbstractIntegrationTest {
     @Autowired
     SyncAttemptRepository syncAttemptRepository;
 
