@@ -8,8 +8,20 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class RCloneCommandBuilder {
-    public List<String> command(String sourcePath, String targetPath) {
-        return List.of("rclone", "sync", sourcePath, targetPath, "--log-level", "INFO");
-    }
 
+    public List<String> command(String sourcePath, String targetPath) {
+        return List.of(
+                "rclone",
+                "sync",
+                sourcePath,
+                targetPath,
+                "--exclude", ".git/**",
+                "--exclude", ".idea/**",
+                "--exclude", ".vscode/**",
+                "--exclude", "target/**",
+                "--exclude", "build/**",
+                "--exclude", ".gradle/**",
+                "--log-level", "INFO"
+        );
+    }
 }
