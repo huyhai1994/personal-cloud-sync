@@ -11,4 +11,5 @@ import org.springframework.context.annotation.Configuration;
 @Setter
 public class SyncJobSchedulerProperties {
     private int batchSize;
+    private int runningInterval;
 }

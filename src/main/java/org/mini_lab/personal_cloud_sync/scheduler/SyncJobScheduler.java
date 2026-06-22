@@ -8,6 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -17,7 +18,10 @@ public class SyncJobScheduler {
     private final SyncJobSchedulerService syncJobSchedulerService;
     private final SyncJobDispatcher dispatcher;
 
-    @Scheduled(fixedRate = 30)
+    @Scheduled(
+            fixedRateString = "${sync-job-scheduler.running-interval}",
+            timeUnit = TimeUnit.SECONDS
+    )
     public void processDueSyncConfig() {
         List<Integer> syncJobIds = syncJobSchedulerService.createDueJobs();
         for (Integer jobId : syncJobIds) {

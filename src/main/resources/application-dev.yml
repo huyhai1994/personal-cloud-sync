@@ -23,3 +23,4 @@ executor-config:
   maximum-pool-size: 10
 sync-job-scheduler:
   batch-size: 10
+  running-interval: 30
