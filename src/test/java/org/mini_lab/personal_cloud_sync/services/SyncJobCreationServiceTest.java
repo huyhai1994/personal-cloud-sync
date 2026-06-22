@@ -6,7 +6,7 @@ import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
 import org.mini_lab.personal_cloud_sync.exception.SyncConfigNotFoundException;
-import org.mini_lab.personal_cloud_sync.exception.SyncJobAlreadyRunningException;
+import org.mini_lab.personal_cloud_sync.exception.SyncJobAlreadyActiveException;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
 import org.mockito.ArgumentCaptor;
@@ -100,7 +100,7 @@ class SyncJobCreationServiceTest {
 
         when(syncJobRepository.existsBySyncConfigIdAndFinalStatusIn(syncConfigId, List.of(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.SUBMITTED))).thenReturn(Boolean.TRUE);
 
-        assertThrows(SyncJobAlreadyRunningException.class, () -> syncJobCreationService.createPendingJob(syncConfigId));
+        assertThrows(SyncJobAlreadyActiveException.class, () -> syncJobCreationService.createPendingJob(syncConfigId));
 
         verify(syncJobRepository, never()).save(any());
 

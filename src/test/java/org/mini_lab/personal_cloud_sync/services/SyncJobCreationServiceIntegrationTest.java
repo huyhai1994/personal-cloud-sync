@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
-import org.mini_lab.personal_cloud_sync.exception.SyncJobAlreadyRunningException;
+import org.mini_lab.personal_cloud_sync.exception.SyncJobAlreadyActiveException;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
 import org.mini_lab.personal_cloud_sync.support.AbstractIntegrationTest;
@@ -91,7 +91,7 @@ class SyncJobCreationServiceIntegrationTest extends AbstractIntegrationTest {
                     assertNotNull(job);
                     successCount++;
                 } catch (ExecutionException e) {
-                    assertInstanceOf(SyncJobAlreadyRunningException.class, e.getCause());
+                    assertInstanceOf(SyncJobAlreadyActiveException.class, e.getCause());
                     alreadyRunningCount++;
                 }
             }

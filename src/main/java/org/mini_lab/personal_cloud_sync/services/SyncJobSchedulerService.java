@@ -9,7 +9,7 @@ import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 import org.mini_lab.personal_cloud_sync.exception.SyncConfigNotFoundException;
-import org.mini_lab.personal_cloud_sync.exception.SyncJobAlreadyRunningException;
+import org.mini_lab.personal_cloud_sync.exception.SyncJobAlreadyActiveException;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -47,7 +47,7 @@ public class SyncJobSchedulerService {
             } catch (SyncConfigNotFoundException e) {
                 log.warn("Skip due sync config because config is no longer enabled. syncConfigId={}",
                         syncConfig.getId(), e);
-            } catch (SyncJobAlreadyRunningException e) {
+            } catch (SyncJobAlreadyActiveException e) {
                 log.info("Skip due sync config because previous job is still active. syncConfigId={}",
                         syncConfig.getId());
             } finally {
