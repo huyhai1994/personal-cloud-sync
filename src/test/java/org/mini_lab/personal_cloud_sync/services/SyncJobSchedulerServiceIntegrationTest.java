@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.configuration.SyncJobSchedulerProperties;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
+import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 import org.mini_lab.personal_cloud_sync.repositories.SyncAttemptRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
@@ -64,6 +65,8 @@ class SyncJobSchedulerServiceIntegrationTest extends AbstractIntegrationTest {
             Instant.parse("2026-06-19T10:00:00Z"),
             ZoneOffset.UTC
     );
+    @Autowired
+    private Clock systemClock;
 
     @AfterEach
     void tearDown() {
@@ -171,5 +174,10 @@ class SyncJobSchedulerServiceIntegrationTest extends AbstractIntegrationTest {
 
         assertNotNull(jobIds);
         assertEquals(2, jobIds.size());
+        List<SyncConfig> syncConfigs = syncConfigRepository.findAllById(List.of(firstDueIntervalSyncConfig.getId(), secondDueIntervalSyncConfig.getId()));
+        for (SyncConfig dueInvervalSyncConfig : syncConfigs){
+            assertEquals(OffsetDateTime.now(currentTime).plusMinutes(10),dueInvervalSyncConfig.getNextScheduledAt());
+        }
+
     }
 }
