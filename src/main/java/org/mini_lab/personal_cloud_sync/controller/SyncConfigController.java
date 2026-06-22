@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mini_lab.personal_cloud_sync.dto.CreateSyncConfigRequest;
 import org.mini_lab.personal_cloud_sync.dto.SyncJobResponse;
-import org.mini_lab.personal_cloud_sync.services.ManualSyncJobService;
+import org.mini_lab.personal_cloud_sync.services.SyncJobService;
 import org.mini_lab.personal_cloud_sync.services.SyncConfigService;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class SyncConfigController {
 
     private final SyncConfigService syncConfigService;
-    private final ManualSyncJobService manualSyncJobService;
+    private final SyncJobService manualSyncJobService;
 
     @PostMapping
     ResponseEntity<Short> createSyncConfig(@RequestBody @NonNull CreateSyncConfigRequest request) {

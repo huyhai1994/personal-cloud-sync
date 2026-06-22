@@ -13,22 +13,19 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @ActiveProfiles("test")
 @ConfigurationPropertiesScan
-class ExecutorConfigTest extends AbstractIntegrationTest {
-
+class SyncJobSchedulerPropertiesTest extends AbstractIntegrationTest {
     @Autowired
-    ExecutorConfigProperties executorConfigProperties;
+    SyncJobSchedulerProperties syncJobSchedulerProperties;
 
     @Test
     void createExecutorConfigBean_shouldReturnBeanFromSpringContext() {
         var context = new AnnotationConfigApplicationContext(SystemTimeConfig.class);
-        assertNotNull(context.getAliases("fixedThreadPool"));
+        assertNotNull(context.getAliases("sync-job-scheduler"));
     }
 
     @Test
     void shouldBindPropertiesFromEnvironment() {
-        assertEquals(5, executorConfigProperties.getCorePoolSize());
-        assertEquals(100, executorConfigProperties.getQueueCapacity());
-        assertEquals(0L, executorConfigProperties.getKeepAliveTime());
+        assertEquals(10, syncJobSchedulerProperties.getBatchSize());
     }
 
 }

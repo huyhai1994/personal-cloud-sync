@@ -2,22 +2,33 @@ package org.mini_lab.personal_cloud_sync.repositories;
 
 import org.junit.jupiter.api.Test;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
+import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
+import org.mini_lab.personal_cloud_sync.support.AbstractIntegrationTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.data.domain.Sort;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
-@ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class SyncConfigRepositoryTest {
+class SyncConfigRepositoryTest extends AbstractIntegrationTest {
+
+    private final Clock fixedClock = Clock.fixed(
+            Instant.parse("2026-06-19T10:00:00Z"),
+            ZoneOffset.UTC
+    );
 
     @Autowired
     private SyncConfigRepository syncConfigRepository;
@@ -154,4 +165,38 @@ class SyncConfigRepositoryTest {
         assertEquals(Optional.empty(), syncConfigByIdAndEnabled);
     }
 
+    @Test
+    void findDueSyncConfigs_shouldReturnOnlyDueAndNonManualConfigs() {
+
+        SyncConfig dueConfig = new SyncConfig();
+        dueConfig.setSourcePath("/source/test1");
+        dueConfig.setTargetPath("/target/test1");
+        dueConfig.setScheduleType(ScheduleType.INTERVAL);
+        dueConfig.setScheduleInterval((short) 30);
+        dueConfig.setNextScheduledAt(
+                OffsetDateTime.now(fixedClock).minusMinutes(10)
+        );
+
+        SyncConfig manualConfig = new SyncConfig();
+        manualConfig.setSourcePath("/source/test2");
+        manualConfig.setTargetPath("/target/test2");
+        manualConfig.setScheduleType(ScheduleType.MANUAL);
+
+        syncConfigRepository.save(dueConfig);
+        syncConfigRepository.save(manualConfig);
+
+        List<SyncConfig> result =
+                syncConfigRepository.findDueNonManualScheduleTypeSyncConfigs(
+                        ScheduleType.MANUAL,
+                        OffsetDateTime.now(fixedClock),
+                        PageRequest.of(
+                                0,
+                                5,
+                                Sort.by("nextScheduledAt").ascending()
+                        )
+                );
+
+        assertThat(result.get(0).getScheduleType())
+                .isEqualTo(ScheduleType.INTERVAL);
+    }
 }

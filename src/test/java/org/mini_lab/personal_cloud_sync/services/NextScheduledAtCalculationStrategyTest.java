@@ -28,7 +28,7 @@ class NextScheduledAtCalculationStrategyTest {
     }
 
     @Test
-    void estimateNextScheduledAt_interval_shouldReturnFixedNowPlusScheduleIntervalHours() {
+    void estimateNextScheduledAt_interval_shouldReturnFixedNowPlusScheduleIntervalMinutes() {
         // given
 
         NextScheduledAtRequest request = new NextScheduledAtRequest();
@@ -43,7 +43,7 @@ class NextScheduledAtCalculationStrategyTest {
         // then
         assertTrue(result.isPresent());
 
-        OffsetDateTime expected = OffsetDateTime.parse("2026-06-05T16:00:00Z");
+        OffsetDateTime expected = OffsetDateTime.parse("2026-06-05T10:06:00Z");
 
         assertEquals(expected, result.get());
     }

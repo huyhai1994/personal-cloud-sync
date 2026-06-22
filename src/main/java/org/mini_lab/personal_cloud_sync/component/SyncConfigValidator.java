@@ -7,7 +7,6 @@ import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 import org.mini_lab.personal_cloud_sync.exception.DuplicateSyncConfigException;
 import org.mini_lab.personal_cloud_sync.exception.LocalPathIsNotDirectory;
 import org.mini_lab.personal_cloud_sync.exception.MaximumRetryCountExceedException;
-import org.mini_lab.personal_cloud_sync.exception.SyncJobAlreadyRunningException;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.util.PathValidationUtils;
 import org.springframework.stereotype.Component;
