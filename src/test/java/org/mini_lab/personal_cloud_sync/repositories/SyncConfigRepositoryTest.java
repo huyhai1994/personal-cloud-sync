@@ -7,13 +7,9 @@ import org.mini_lab.personal_cloud_sync.support.AbstractIntegrationTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -190,7 +186,7 @@ class SyncConfigRepositoryTest extends AbstractIntegrationTest {
         syncConfigRepository.save(manualConfig);
 
         List<SyncConfig> result =
-                syncConfigRepository.findDueSyncConfigs(
+                syncConfigRepository.findDueNonManualScheduleTypeSyncConfigs(
                         ScheduleType.MANUAL,
                         OffsetDateTime.now(fixedClock),
                         PageRequest.of(

@@ -4,15 +4,21 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mini_lab.personal_cloud_sync.component.NextScheduledAtCalculationStrategy;
 import org.mini_lab.personal_cloud_sync.configuration.SyncJobSchedulerProperties;
+import org.mini_lab.personal_cloud_sync.dto.NextScheduledAtRequest;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
+import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
+import org.mini_lab.personal_cloud_sync.exception.SyncConfigNotFoundException;
+import org.mini_lab.personal_cloud_sync.exception.SyncJobAlreadyRunningException;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -23,18 +29,54 @@ public class SyncJobSchedulerService {
 
     private final SyncJobSchedulerProperties syncJobSchedulerProperties;
 
+    private final SyncJobCreationService syncJobCreationService;
+
     private final Clock systemClock;
 
-    public List<SyncConfig> findDueSyncConfig() {
-        int pageSize = syncJobSchedulerProperties.getPollingTime();
-        return syncConfigRepository.findDueSyncConfigs(
+    @Transactional
+    public List<Integer> createDueJobs() {
+        List<Integer> syncJobs = new ArrayList<>();
+        int batchSize = syncJobSchedulerProperties.getBatchSize();
+
+        List<SyncConfig> syncConfigs = getDueSyncConfigsForUpdate(batchSize);
+
+        for (SyncConfig syncConfig : syncConfigs) {
+            try {
+                SyncJob syncJob = syncJobCreationService.createPendingJob(syncConfig.getId());
+                syncJobs.add(syncJob.getId());
+            } catch (SyncConfigNotFoundException e) {
+                log.warn("Skip due sync config because config is no longer enabled. syncConfigId={}",
+                        syncConfig.getId(), e);
+            } catch (SyncJobAlreadyRunningException e) {
+                log.info("Skip due sync config because previous job is still active. syncConfigId={}",
+                        syncConfig.getId());
+            } finally {
+                syncConfig.setNextScheduledAt(estimateNextScheduledAt(syncConfig));
+            }
+        }
+
+        return syncJobs;
+    }
+
+    private List<SyncConfig> getDueSyncConfigsForUpdate(int batchSize) {
+        return syncConfigRepository.findDueNonManualScheduleTypeSyncConfigs(
                 ScheduleType.MANUAL,
                 OffsetDateTime.now(systemClock),
                 PageRequest.of(
                         0,
-                        pageSize,
+                        batchSize,
                         Sort.by("nextScheduledAt").ascending()
                 )
         );
     }
+
+    private OffsetDateTime estimateNextScheduledAt(SyncConfig syncConfig) {
+        NextScheduledAtRequest nextScheduledAtRequest = NextScheduledAtRequest
+                .builder()
+                .runTime(syncConfig.getRunTime())
+                .scheduleInterval(syncConfig.getScheduleInterval())
+                .scheduleType(syncConfig.getScheduleType()).build();
+        return NextScheduledAtCalculationStrategy.estimateNextScheduledAt(nextScheduledAtRequest, systemClock).orElseThrow();
+    }
+
 }

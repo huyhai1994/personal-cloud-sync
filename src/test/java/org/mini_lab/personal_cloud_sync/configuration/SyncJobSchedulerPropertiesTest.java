@@ -25,7 +25,7 @@ class SyncJobSchedulerPropertiesTest extends AbstractIntegrationTest {
 
     @Test
     void shouldBindPropertiesFromEnvironment() {
-        assertEquals(10, syncJobSchedulerProperties.getPollingTime());
+        assertEquals(10, syncJobSchedulerProperties.getBatchSize());
     }
 
 }

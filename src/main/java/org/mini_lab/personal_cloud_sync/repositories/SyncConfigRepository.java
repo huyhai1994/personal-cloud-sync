@@ -34,7 +34,7 @@ public interface SyncConfigRepository extends JpaRepository<SyncConfig, Short> {
               and sc.scheduleType <> :scheduleType
               and sc.nextScheduledAt <= :now
             """)
-    List<SyncConfig> findDueSyncConfigs(
+    List<SyncConfig> findDueNonManualScheduleTypeSyncConfigs(
             @Param("scheduleType") ScheduleType scheduleType,
             @Param("now") OffsetDateTime now,
             Pageable pageable

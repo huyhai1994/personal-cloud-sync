@@ -10,5 +10,5 @@ import org.springframework.context.annotation.Configuration;
 @Getter
 @Setter
 public class SyncJobSchedulerProperties {
-    private int pollingTime;
+    private int batchSize;
 }

@@ -20,7 +20,7 @@ public class NextScheduledAtCalculationStrategy {
         return switch (scheduleType) {
             case MANUAL -> Optional.empty();
 
-            case INTERVAL -> Optional.of(now.plusHours(scheduleInterval));
+            case INTERVAL -> Optional.of(now.plusMinutes(scheduleInterval));
 
             case DAILY -> {
                 OffsetDateTime candidate = OffsetDateTime.of(now.toLocalDate(), runTime, now.getOffset());
