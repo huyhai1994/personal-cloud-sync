@@ -22,4 +22,4 @@ executor-config:
   queue-capacity: 100
   maximum-pool-size: 10
 sync-job-scheduler:
-  polling-time: 10
+  batch-size: 10
