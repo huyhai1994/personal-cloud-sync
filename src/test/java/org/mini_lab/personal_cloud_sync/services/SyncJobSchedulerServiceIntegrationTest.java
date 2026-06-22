@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.configuration.SyncJobSchedulerProperties;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
-import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 import org.mini_lab.personal_cloud_sync.repositories.SyncAttemptRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
@@ -20,7 +19,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.file.Path;
 import java.time.*;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -132,7 +133,7 @@ class SyncJobSchedulerServiceIntegrationTest extends AbstractIntegrationTest {
                 false
         );
 
-        assertAll( () -> assertNotNull(manualSyncConfig), () -> assertNotNull(firstDueIntervalSyncConfig), () -> assertNotNull(secondDueIntervalSyncConfig),
+        assertAll(() -> assertNotNull(manualSyncConfig), () -> assertNotNull(firstDueIntervalSyncConfig), () -> assertNotNull(secondDueIntervalSyncConfig),
                 () -> assertNotNull(futureIntervalSyncConfig),
                 () -> assertNotNull(disabledDueIntervalSyncConfig)
         );
@@ -175,9 +176,43 @@ class SyncJobSchedulerServiceIntegrationTest extends AbstractIntegrationTest {
         assertNotNull(jobIds);
         assertEquals(2, jobIds.size());
         List<SyncConfig> syncConfigs = syncConfigRepository.findAllById(List.of(firstDueIntervalSyncConfig.getId(), secondDueIntervalSyncConfig.getId()));
-        for (SyncConfig dueInvervalSyncConfig : syncConfigs){
-            assertEquals(OffsetDateTime.now(currentTime).plusMinutes(10),dueInvervalSyncConfig.getNextScheduledAt());
+        for (SyncConfig dueInvervalSyncConfig : syncConfigs) {
+            assertEquals(OffsetDateTime.now(currentTime).plusMinutes(10), dueInvervalSyncConfig.getNextScheduledAt());
         }
+    }
+
+    @Test
+    void createDueJobs_whenTwoTransactionCreateWithSameConfig_thenOnlyCreateJobsOne() throws InterruptedException, TimeoutException, ExecutionException {
+        int numberOfThread = 2;
+        CountDownLatch readyLatch = new CountDownLatch(numberOfThread);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        ExecutorService executorService = Executors.newFixedThreadPool(numberOfThread);
+
+        Callable<List<Integer>> task = () -> {
+            readyLatch.countDown();
+            startLatch.await();
+            return transactionTemplate.execute(status -> syncJobSchedulerService.createDueJobs());
+        };
+        Future<List<Integer>> future1 = executorService.submit(task);
+        Future<List<Integer>> future2 = executorService.submit(task);
+
+        assertTrue(readyLatch.await(5, TimeUnit.SECONDS));
+        startLatch.countDown();
+
+        List<List<Integer>> results = new ArrayList<>();
+
+        for (Future<List<Integer>> future : List.of(future1, future2)) {
+            List<Integer> jobIds = future.get(5, TimeUnit.SECONDS);
+            assertNotNull(jobIds);
+            results.add(jobIds);
+        }
+
+        int createdJobIdsCount = results.stream()
+                .mapToInt(List::size)
+                .sum();
+
+        assertEquals(2, createdJobIdsCount);
+        assertEquals(2, syncJobRepository.count());
 
     }
 }
