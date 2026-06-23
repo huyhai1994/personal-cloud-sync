@@ -1,12 +1,10 @@
 package org.mini_lab.personal_cloud_sync.repositories;
 
+import jakarta.persistence.LockModeType;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
@@ -15,12 +13,14 @@ import java.util.Optional;
 
 public interface SyncJobRepository extends JpaRepository<SyncJob, Integer> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             SELECT sj from SyncJob as sj
                     where sj.finalStatus = :jobStatus
-                    and sj.finishedAt < :currentTime - :timeOutLimit minute
+                    and sj.createdAt < :currentTime - :timeOutLimit minute
             """
     )
+    @EntityGraph(attributePaths = "syncAttempts")
     List<SyncJob> findTimedOutRunningJobs(
             @Param("jobStatus") JobStatus jobStatus,
             @Param("currentTime") OffsetDateTime currentTime,
@@ -55,4 +55,14 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Integer> {
             JobStatus currentStatus,
             JobStatus targetStatus
     );
+
+    @Modifying
+    @Query("""
+                update SyncJob sj
+                set sj.finishedAt =:finishedAt
+                where sj.id = :id
+            """)
+    void updateUpdatedAtForTest(@Param("id") Integer id,
+                                @Param("finishedAt") OffsetDateTime finishedAt);
 }
+

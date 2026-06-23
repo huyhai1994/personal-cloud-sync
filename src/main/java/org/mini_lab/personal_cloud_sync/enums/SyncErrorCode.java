@@ -6,5 +6,6 @@ public enum SyncErrorCode {
     IO_ERROR,
     INTERRUPTED,
     SYNC_PROCESS_ERROR,
-    UNKNOWN_ERROR
+    UNKNOWN_ERROR,
+    RECOVERY_TIMEOUT
 }
