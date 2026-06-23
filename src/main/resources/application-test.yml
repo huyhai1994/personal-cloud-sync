@@ -31,3 +31,5 @@ executor-config:
 sync-job-scheduler:
   batch-size: 10
   running-interval: 30
+recovery-scheduler:
+  running-job-timed-out-limit: 20
