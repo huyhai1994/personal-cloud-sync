@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.configuration.SyncJobSchedulerProperties;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
+import org.mini_lab.personal_cloud_sync.entities.SyncJob;
+import org.mini_lab.personal_cloud_sync.enums.JobStatus;
 import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 import org.mini_lab.personal_cloud_sync.repositories.SyncAttemptRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
@@ -21,6 +23,7 @@ import java.nio.file.Path;
 import java.time.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -60,7 +63,7 @@ class SyncJobSchedulerServiceIntegrationTest extends AbstractIntegrationTest {
     private SyncJobSchedulerProperties syncJobSchedulerProperties;
 
     @Autowired
-    private SyncJobCreationService syncJobCreationService;
+    private ScheduledSyncJobCreationService syncJobCreationService;
 
     private final Clock currentTime = Clock.fixed(
             Instant.parse("2026-06-19T10:00:00Z"),
@@ -213,6 +216,28 @@ class SyncJobSchedulerServiceIntegrationTest extends AbstractIntegrationTest {
 
         assertEquals(2, createdJobIdsCount);
         assertEquals(2, syncJobRepository.count());
+    }
 
+    @Test
+    void createDueJobs_shouldNotRollbackOtherJobs_whenOneConfigHasActiveJob() {
+        SyncJob activeSyncJob = new SyncJob();
+        activeSyncJob.setFinalStatus(JobStatus.RUNNING);
+        activeSyncJob.setSyncConfig(secondDueIntervalSyncConfig);
+        transactionTemplate.executeWithoutResult(status ->
+                syncJobRepository.save(activeSyncJob));
+        assertDoesNotThrow(() ->
+                transactionTemplate.executeWithoutResult(status ->
+                        syncJobSchedulerService.createDueJobs()
+                ));
+        SyncConfig updatedfirstSyncConfig = Objects.requireNonNull(transactionTemplate.execute(status ->
+                syncConfigRepository.getSyncConfigByIdAndEnabled(firstDueIntervalSyncConfig.getId(), true)
+        )).orElseThrow();
+
+        SyncConfig updatedSecondSyncConfig = Objects.requireNonNull(transactionTemplate.execute(status ->
+                syncConfigRepository.getSyncConfigByIdAndEnabled(secondDueIntervalSyncConfig.getId(), true)
+        )).orElseThrow();
+
+        assertNotEquals(firstDueIntervalSyncConfig.getNextScheduledAt(), updatedfirstSyncConfig.getNextScheduledAt());
+        assertEquals(secondDueIntervalSyncConfig.getNextScheduledAt(), updatedSecondSyncConfig.getNextScheduledAt());
     }
 }

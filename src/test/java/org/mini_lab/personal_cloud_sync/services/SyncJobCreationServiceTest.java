@@ -25,7 +25,7 @@ import static org.mockito.Mockito.*;
 class SyncJobCreationServiceTest {
 
     @InjectMocks
-    SyncJobCreationService syncJobCreationService;
+    ManualSyncJobCreationService syncJobCreationService;
 
     @Mock
     SyncJobRepository syncJobRepository;

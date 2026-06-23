@@ -9,9 +9,9 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SyncJobService {
+public class ManualSyncJobService {
     private final SyncJobDispatcher syncJobDispatcher;
-    private final SyncJobCreationService syncJobCreationService;
+    private final ManualSyncJobCreationService syncJobCreationService;
 
     public SyncJobResponse createAndDispatch(Short syncConfigId) {
         SyncJob syncJob = syncJobCreationService.createPendingJob(syncConfigId);

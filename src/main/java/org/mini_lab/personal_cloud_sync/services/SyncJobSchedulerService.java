@@ -29,7 +29,7 @@ public class SyncJobSchedulerService {
 
     private final SyncJobSchedulerProperties syncJobSchedulerProperties;
 
-    private final SyncJobCreationService syncJobCreationService;
+    private final ScheduledSyncJobCreationService syncJobCreationService;
 
     private final Clock systemClock;
 

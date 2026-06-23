@@ -14,7 +14,6 @@ import org.mini_lab.personal_cloud_sync.support.AbstractIntegrationTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -32,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ManualSyncJobServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
-    private SyncJobService manualSyncJobService;
+    private ManualSyncJobService manualSyncJobService;
 
     @TempDir
     Path sourcePath;

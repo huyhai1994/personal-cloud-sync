@@ -15,7 +15,7 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @Service
-public class SyncJobCreationService {
+public class ScheduledSyncJobCreationService {
 
     private final SyncConfigRepository syncConfigRepository;
     private final SyncJobRepository syncJobRepository;

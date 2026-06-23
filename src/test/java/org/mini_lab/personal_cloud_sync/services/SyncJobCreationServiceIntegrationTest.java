@@ -38,7 +38,7 @@ class SyncJobCreationServiceIntegrationTest extends AbstractIntegrationTest {
     private SyncJobRepository syncJobRepository;
 
     @Autowired
-    private SyncJobCreationService syncJobCreationService;
+    private ManualSyncJobCreationService syncJobCreationService;
 
     private SyncConfig persistedSyncConfig;
 

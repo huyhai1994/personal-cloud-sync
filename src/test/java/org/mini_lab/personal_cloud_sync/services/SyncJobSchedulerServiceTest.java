@@ -33,7 +33,7 @@ class SyncJobSchedulerServiceTest {
     SyncJobSchedulerProperties syncJobSchedulerProperties;
 
     @Mock
-    SyncJobCreationService syncJobCreationService;
+    ScheduledSyncJobCreationService syncJobCreationService;
 
     @InjectMocks
     SyncJobSchedulerService syncJobSchedulerService;
