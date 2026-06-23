@@ -8,8 +8,6 @@ import org.mini_lab.personal_cloud_sync.dto.NextScheduledAtRequest;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
-import org.mini_lab.personal_cloud_sync.exception.SyncConfigNotFoundException;
-import org.mini_lab.personal_cloud_sync.exception.SyncJobAlreadyActiveException;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -20,6 +18,7 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -29,7 +28,7 @@ public class SyncJobSchedulerService {
 
     private final SyncJobSchedulerProperties syncJobSchedulerProperties;
 
-    private final ScheduledSyncJobCreationService syncJobCreationService;
+    private final ScheduledSyncJobCreationService scheduledSyncJobCreationService;
 
     private final Clock systemClock;
 
@@ -41,18 +40,9 @@ public class SyncJobSchedulerService {
         List<SyncConfig> syncConfigs = getDueSyncConfigsForUpdate(batchSize);
 
         for (SyncConfig syncConfig : syncConfigs) {
-            try {
-                SyncJob syncJob = syncJobCreationService.createPendingJob(syncConfig.getId());
-                syncJobs.add(syncJob.getId());
-            } catch (SyncConfigNotFoundException e) {
-                log.warn("Skip due sync config because config is no longer enabled. syncConfigId={}",
-                        syncConfig.getId(), e);
-            } catch (SyncJobAlreadyActiveException e) {
-                log.info("Skip due sync config because previous job is still active. syncConfigId={}",
-                        syncConfig.getId());
-            } finally {
-                syncConfig.setNextScheduledAt(estimateNextScheduledAt(syncConfig));
-            }
+            Optional<SyncJob> syncJob = scheduledSyncJobCreationService.createPendingJob(syncConfig);
+            syncJob.ifPresent(job -> syncJobs.add(job.getId()));
+            syncConfig.setNextScheduledAt(estimateNextScheduledAt(syncConfig));
         }
 
         return syncJobs;

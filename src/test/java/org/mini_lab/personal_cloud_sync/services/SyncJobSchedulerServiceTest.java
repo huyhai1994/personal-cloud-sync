@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
@@ -33,7 +34,7 @@ class SyncJobSchedulerServiceTest {
     SyncJobSchedulerProperties syncJobSchedulerProperties;
 
     @Mock
-    ScheduledSyncJobCreationService syncJobCreationService;
+    ScheduledSyncJobCreationService scheduledSyncJobCreationService;
 
     @InjectMocks
     SyncJobSchedulerService syncJobSchedulerService;
@@ -48,7 +49,7 @@ class SyncJobSchedulerServiceTest {
         syncJobSchedulerService = new SyncJobSchedulerService(
                 syncConfigRepository,
                 syncJobSchedulerProperties,
-                syncJobCreationService,
+                scheduledSyncJobCreationService,
                 fixedClock
         );
     }
@@ -79,17 +80,17 @@ class SyncJobSchedulerServiceTest {
                 )
         )).thenReturn(List.of(dueConfig));
 
-        when(syncJobCreationService.createPendingJob(dueConfig.getId())).thenReturn(syncJob);
+        when(scheduledSyncJobCreationService.createPendingJob(dueConfig)).thenReturn(Optional.of(syncJob));
 
         syncJobSchedulerService.createDueJobs();
 
-        verify(syncJobCreationService).createPendingJob(dueConfig.getId());
+        verify(scheduledSyncJobCreationService).createPendingJob(dueConfig);
 
     }
 
     @Test
     void createDueJobs_whenDueConfigsNotExists_listOfDueJobShouldBeEmpty() {
-        short dueConfigId = (short) 100;
+        SyncConfig syncConfig = new SyncConfig();
         int batchSize = 10;
         when(syncJobSchedulerProperties
                 .getBatchSize()).thenReturn(batchSize);
@@ -104,7 +105,7 @@ class SyncJobSchedulerServiceTest {
         )).thenReturn(List.of());
 
         assertEquals(List.of(), syncJobSchedulerService.createDueJobs());
-        verify(syncJobCreationService, never()).createPendingJob(dueConfigId);
+        verify(scheduledSyncJobCreationService, never()).createPendingJob(syncConfig);
 
     }
 
@@ -132,7 +133,7 @@ class SyncJobSchedulerServiceTest {
                         Sort.by("nextScheduledAt").ascending()
                 )
         )).thenReturn(List.of(dueConfig));
-        when(syncJobCreationService.createPendingJob(dueConfigId)).thenThrow(new SyncConfigNotFoundException());
+        when(scheduledSyncJobCreationService.createPendingJob(dueConfig)).thenReturn(Optional.empty());
         assertEquals(List.of(), syncJobSchedulerService.createDueJobs());
 
     }

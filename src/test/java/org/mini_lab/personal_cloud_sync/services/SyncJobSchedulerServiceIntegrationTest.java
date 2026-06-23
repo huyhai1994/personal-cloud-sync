@@ -238,6 +238,6 @@ class SyncJobSchedulerServiceIntegrationTest extends AbstractIntegrationTest {
         )).orElseThrow();
 
         assertNotEquals(firstDueIntervalSyncConfig.getNextScheduledAt(), updatedfirstSyncConfig.getNextScheduledAt());
-        assertEquals(secondDueIntervalSyncConfig.getNextScheduledAt(), updatedSecondSyncConfig.getNextScheduledAt());
+        assertNotEquals(secondDueIntervalSyncConfig.getNextScheduledAt(), updatedSecondSyncConfig.getNextScheduledAt());
     }
 }
