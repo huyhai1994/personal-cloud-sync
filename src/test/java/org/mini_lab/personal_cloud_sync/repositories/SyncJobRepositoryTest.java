@@ -4,20 +4,23 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
+import org.mini_lab.personal_cloud_sync.enums.ScheduleType;
 import org.mini_lab.personal_cloud_sync.support.AbstractIntegrationTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,58 +42,54 @@ class SyncJobRepositoryTest extends AbstractIntegrationTest {
     @Autowired
     private EntityManagerFactory entityManagerFactory;
 
-    @Test
-    void saveSyncJob_missing_finalStatus_shouldThrow() {
-        SyncJob syncJob = new SyncJob();
-        SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
-        SyncConfig persistedSyncConfig = syncConfigRepository.saveAndFlush(syncConfig);
+    @TempDir
+    Path sourcePath;
 
+    @TempDir
+    Path targetPath;
+
+    private final Clock currentTime = Clock.fixed(
+            Instant.parse("2026-06-23T10:00:00Z"),
+            ZoneOffset.UTC
+    );
+
+    @Test
+    void saveSyncJob_missingFinalStatus_shouldThrow() {
+        SyncConfig persistedSyncConfig = saveSyncConfig("missing-final-status");
+
+        SyncJob syncJob = new SyncJob();
         syncJob.setSyncConfig(persistedSyncConfig);
-        assertThrows(DataIntegrityViolationException.class, () -> {
-            syncJobRepository.saveAndFlush(syncJob);
-        });
+
+        assertThrows(DataIntegrityViolationException.class, () ->
+                syncJobRepository.saveAndFlush(syncJob)
+        );
     }
 
     @Test
-    void saveSyncJob_should_success() {
-        SyncJob syncJob = new SyncJob();
-        SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
-        SyncConfig persistedSyncConfig = syncConfigRepository.saveAndFlush(syncConfig);
+    void saveSyncJob_shouldSuccess() {
+        SyncConfig persistedSyncConfig = saveSyncConfig("save-success");
 
+        SyncJob syncJob = new SyncJob();
         syncJob.setSyncConfig(persistedSyncConfig);
         syncJob.setFinalStatus(JobStatus.PENDING);
 
         SyncJob persistedSyncJob = syncJobRepository.saveAndFlush(syncJob);
+
         assertNotNull(persistedSyncConfig.getCreatedAt());
         assertNotNull(persistedSyncJob.getId());
     }
 
     @Test
-    void getAllSyncJob_pendingStatus() {
-        SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
-        SyncConfig persistedSyncConfig =
-                syncConfigRepository.saveAndFlush(syncConfig);
+    void getAllSyncJob_shouldReturnOnlyPendingJobs_whenPendingStatusRequested() {
+        SyncConfig persistedSyncConfig = saveSyncConfig("pending-status");
 
-        SyncJob firstSyncJob = new SyncJob();
-        firstSyncJob.setSyncConfig(persistedSyncConfig);
-        firstSyncJob.setFinalStatus(JobStatus.PENDING);
+        SyncJob firstPendingJob = buildSyncJob(persistedSyncConfig, JobStatus.PENDING);
+        SyncJob secondPendingJob = buildSyncJob(persistedSyncConfig, JobStatus.PENDING);
+        SyncJob runningJob = buildSyncJob(persistedSyncConfig, JobStatus.RUNNING);
 
-        SyncJob secondSyncJob = new SyncJob();
-        secondSyncJob.setSyncConfig(persistedSyncConfig);
-        secondSyncJob.setFinalStatus(JobStatus.PENDING);
-
-        SyncJob notPendingSyncJob = new SyncJob();
-        notPendingSyncJob.setSyncConfig(persistedSyncConfig);
-        notPendingSyncJob.setFinalStatus(JobStatus.RUNNING);
-        syncJobRepository.saveAndFlush(firstSyncJob);
-        syncJobRepository.saveAndFlush(secondSyncJob);
-        syncJobRepository.saveAndFlush(notPendingSyncJob);
+        syncJobRepository.saveAndFlush(firstPendingJob);
+        syncJobRepository.saveAndFlush(secondPendingJob);
+        syncJobRepository.saveAndFlush(runningJob);
 
         List<SyncJob> result =
                 syncJobRepository.getAllByFinalStatus(
@@ -105,60 +104,48 @@ class SyncJobRepositoryTest extends AbstractIntegrationTest {
         );
     }
 
-
     @Test
     void getSyncJobById_shouldReturnOptionalSyncJob() {
-        SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
-        SyncConfig persistedSyncConfig =
-                syncConfigRepository.saveAndFlush(syncConfig);
+        SyncConfig persistedSyncConfig = saveSyncConfig("find-by-id");
 
-        SyncJob initialSyncJob = new SyncJob();
-        initialSyncJob.setSyncConfig(persistedSyncConfig);
-        initialSyncJob.setFinalStatus(JobStatus.PENDING);
+        SyncJob initialSyncJob = buildSyncJob(persistedSyncConfig, JobStatus.PENDING);
+        SyncJob persistedSyncJob = syncJobRepository.saveAndFlush(initialSyncJob);
 
-        SyncJob syncJob = syncJobRepository.saveAndFlush(initialSyncJob);
-        Integer syncJobId = syncJob.getId();
-        Optional<SyncJob> foundSyncJobOpt = syncJobRepository.getSyncJobById(syncJobId);
-        assertNotNull(foundSyncJobOpt.orElseThrow());
+        Optional<SyncJob> foundSyncJobOpt =
+                syncJobRepository.getSyncJobById(persistedSyncJob.getId());
+
+        assertTrue(foundSyncJobOpt.isPresent());
     }
 
     @Test
-    @DisplayName("Business Rule: check for duplicate sync job before create a new one")
-    void existBySyncConfigAndStatus_shouldReturnTrue_whenPendingJobExists() {
-        SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
-        SyncConfig persistedSyncConfig =
-                syncConfigRepository.saveAndFlush(syncConfig);
+    @DisplayName("Business Rule: check for duplicate sync job before creating a new one")
+    void existsBySyncConfigIdAndFinalStatusIn_shouldReturnTrue_whenPendingJobExists() {
+        SyncConfig persistedSyncConfig = saveSyncConfig("duplicate-check");
 
-        SyncJob firstSyncJob = new SyncJob();
-        firstSyncJob.setSyncConfig(persistedSyncConfig);
-        firstSyncJob.setFinalStatus(JobStatus.PENDING);
+        SyncJob pendingJob = buildSyncJob(persistedSyncConfig, JobStatus.PENDING);
+        syncJobRepository.saveAndFlush(pendingJob);
 
-        syncJobRepository.saveAndFlush(firstSyncJob);
-        assertTrue(syncJobRepository.existsBySyncConfigIdAndFinalStatusIn(persistedSyncConfig.getId(), List.of(JobStatus.PENDING, JobStatus.RUNNING)));
+        assertTrue(
+                syncJobRepository.existsBySyncConfigIdAndFinalStatusIn(
+                        persistedSyncConfig.getId(),
+                        List.of(JobStatus.PENDING, JobStatus.RUNNING)
+                )
+        );
     }
 
     @Test
-    void getSyncJobById_shouldFetchSynConfigImmediately() {
-        SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
-        SyncConfig persistedSyncConfig = syncConfigRepository.saveAndFlush(syncConfig);
+    void getSyncJobById_shouldFetchSyncConfigImmediately() {
+        SyncConfig persistedSyncConfig = saveSyncConfig("fetch-sync-config");
 
-        SyncJob syncJob = new SyncJob();
-        syncJob.setSyncConfig(persistedSyncConfig);
-        syncJob.setFinalStatus(JobStatus.PENDING);
+        SyncJob syncJob = buildSyncJob(persistedSyncConfig, JobStatus.PENDING);
         SyncJob savedSyncJob = syncJobRepository.saveAndFlush(syncJob);
-
-        Integer id = savedSyncJob.getId();
 
         entityManager.flush();
         entityManager.clear();
 
-        SyncJob foundSyncJob = syncJobRepository.getSyncJobById(id).orElseThrow();
+        SyncJob foundSyncJob =
+                syncJobRepository.getSyncJobById(savedSyncJob.getId())
+                        .orElseThrow();
 
         assertNotNull(foundSyncJob.getSyncConfig());
 
@@ -167,6 +154,50 @@ class SyncJobRepositoryTest extends AbstractIntegrationTest {
                         .isLoaded(foundSyncJob, "syncConfig")
         );
 
-        assertEquals("/source/test", foundSyncJob.getSyncConfig().getSourcePath());
+        assertEquals(
+                sourcePath.resolve("fetch-sync-config").toString(),
+                foundSyncJob.getSyncConfig().getSourcePath()
+        );
+    }
+
+    @Test
+    void findTimedOutRunningJobs_shouldReturnTimedOutJobs() {
+        SyncConfig timoutPersistedSyncConfig = saveSyncConfig("timed-out-running-job");
+        SyncConfig notTimeOutPersistedSyncConfig = saveSyncConfig("not-timed-out-running-job");
+
+        SyncJob timeoutSyncJob = buildSyncJob(timoutPersistedSyncConfig, JobStatus.RUNNING);
+        timeoutSyncJob.setFinishedAt(OffsetDateTime.now(currentTime).minusMinutes(20));
+        syncJobRepository.saveAndFlush(timeoutSyncJob);
+
+        SyncJob notTimeoutSyncJob = buildSyncJob(notTimeOutPersistedSyncConfig, JobStatus.RUNNING);
+        notTimeoutSyncJob.setFinishedAt(OffsetDateTime.now(currentTime).minusMinutes(5));
+        syncJobRepository.saveAndFlush(notTimeoutSyncJob);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        List<SyncJob> timedOutRunningJobs =
+                syncJobRepository.findTimedOutRunningJobs(
+                        JobStatus.RUNNING,
+                        OffsetDateTime.now(currentTime),
+                        15
+                );
+
+        assertEquals(1, timedOutRunningJobs.size());
+    }
+
+    private SyncConfig saveSyncConfig(String pathSuffix) {
+        SyncConfig syncConfig = new SyncConfig();
+        syncConfig.setSourcePath(sourcePath.resolve(pathSuffix).toString());
+        syncConfig.setTargetPath(targetPath.resolve(pathSuffix).toString());
+        syncConfig.setScheduleType(ScheduleType.MANUAL);
+        return syncConfigRepository.saveAndFlush(syncConfig);
+    }
+
+    private SyncJob buildSyncJob(SyncConfig syncConfig, JobStatus finalStatus) {
+        SyncJob syncJob = new SyncJob();
+        syncJob.setSyncConfig(syncConfig);
+        syncJob.setFinalStatus(finalStatus);
+        return syncJob;
     }
 }
