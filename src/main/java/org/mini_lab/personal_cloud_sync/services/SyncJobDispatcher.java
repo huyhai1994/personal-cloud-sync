@@ -6,6 +6,8 @@ import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 import java.util.concurrent.RejectedExecutionException;
 
 @Slf4j
@@ -23,12 +25,31 @@ public class SyncJobDispatcher {
         try {
             log.info("SYNC_JOB_DISPATCHED syncJobId={}", syncJobId);
             syncJobProcessorService.markSubmitted(syncJobId);
-            syncJobExecutor.execute(() -> {
-                MDC.put("syncJobId", syncJobId.toString());
-                syncJobProcessor.process(syncJobId);
-            });
+            syncJobExecutor
+                    .execute(withMdcContext(
+                            () -> {
+                                MDC.put("syncJobId", syncJobId.toString());
+                                syncJobProcessor.process(syncJobId);
+                            })
+                    );
         } catch (RejectedExecutionException e) {
             syncJobProcessorService.markSubmitFailed(syncJobId);
         }
+    }
+
+    private Runnable withMdcContext(Runnable task) {
+        Map<String, String> contextMap = MDC.getCopyOfContextMap();
+
+        return () -> {
+            try {
+                if (contextMap != null) {
+                    MDC.setContextMap(contextMap);
+                }
+
+                task.run();
+            } finally {
+                MDC.clear();
+            }
+        };
     }
 }
