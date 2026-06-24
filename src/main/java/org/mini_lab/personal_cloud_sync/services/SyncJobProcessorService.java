@@ -1,5 +1,6 @@
 package org.mini_lab.personal_cloud_sync.services;
 
+import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mini_lab.personal_cloud_sync.dto.SyncJobContext;
@@ -20,6 +21,10 @@ public class SyncJobProcessorService {
     private final SyncAttemptRecorder syncAttemptRecorder;
 
     @Transactional
+    @Timed(
+            value = "sync.job.processor.service.mark.running",
+            description = "Time taken to change state from SUMMITED to RUNNING"
+    )
     public SyncJobContext markRunning(Integer syncJobId) {
         log.info("MARK_RUNNING_STARTED syncJobId={}", syncJobId);
 
@@ -41,6 +46,10 @@ public class SyncJobProcessorService {
     }
 
     @Transactional
+    @Timed(
+            value = "sync.job.processor.service.mark.failed",
+            description = "Time taken to change state from RUNNING to FAILED"
+    )
     public void markFailed(SyncJobContext syncJobContext, SyncErrorLog syncErrorLog) {
         Integer syncJobId = syncJobContext.syncJobId();
         int claimJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.FAILED);
@@ -50,6 +59,10 @@ public class SyncJobProcessorService {
     }
 
     @Transactional
+    @Timed(
+            value = "sync.job.processor.service.mark.success",
+            description = "Time taken to change state from RUNNING to SUCCESS"
+    )
     public void markSuccess(SyncJobContext syncJobContext) {
         Integer syncJobId = syncJobContext.syncJobId();
         Integer syncAttemptId = syncJobContext.syncAttemptId();
@@ -60,6 +73,10 @@ public class SyncJobProcessorService {
     }
 
     @Transactional
+    @Timed(
+            value = "sync.job.processor.service.mark.submit.failed",
+            description = "Time taken to change state from PENDING to SUBMIT_FAILED"
+    )
     public void markSubmitFailed(Integer syncJobId) {
         int claimedJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.SUBMIT_FAILED);
         assertOnlyOneJobClaimed(claimedJobCount);
@@ -67,6 +84,10 @@ public class SyncJobProcessorService {
     }
 
     @Transactional
+    @Timed(
+            value = "sync.job.processor.service.mark.submitted",
+            description = "Time taken to change state from PENDING to SUBMITTED"
+    )
     public void markSubmitted(Integer syncJobId) {
         int claimedJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.SUBMITTED);
         assertOnlyOneJobClaimed(claimedJobCount);
