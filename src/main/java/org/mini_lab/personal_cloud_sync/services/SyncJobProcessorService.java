@@ -113,4 +113,11 @@ public class SyncJobProcessorService {
         }
     }
 
+    public void updateHeartbeat(Integer syncJobId) {
+        int claimedJobCount = syncJobRepository.updateHeartbeatIfRunning(
+                syncJobId,
+                JobStatus.RUNNING,
+                OffsetDateTime.now(systemClock));
+        assertOnlyOneJobClaimed(claimedJobCount);
+    }
 }

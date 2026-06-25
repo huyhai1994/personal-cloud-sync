@@ -13,6 +13,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.file.InvalidPathException;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -21,10 +24,23 @@ public class SyncJobProcessor {
     private final IRCloneExecutor rCloneExecutor;
     private final SyncJobProcessorService syncJobProcessorService;
     private final SyncConfigValidator syncConfigValidator;
+    private final ScheduledThreadPoolExecutor heartbeatExecutor;
 
     public void process(Integer syncJobId) {
         log.info("SYNC_JOB_PROCESS_STARTED");
         SyncJobContext syncJobContext = syncJobProcessorService.markRunning(syncJobId);
+        ScheduledFuture<?> heartbeatTask = heartbeatExecutor.scheduleAtFixedRate(
+                () -> {
+                    try {
+                        syncJobProcessorService.updateHeartbeat(syncJobId);
+                    } catch (Exception e) {
+                        log.warn("UPDATE_HEARTBEAT_FAILED syncJobId={}", syncJobId, e);
+                    }
+                },
+                5,
+                5,
+                TimeUnit.SECONDS
+        );
         try {
             validate(syncJobContext);
             RCloneResult rCloneResult = rCloneExecutor.sync(syncJobContext);
@@ -49,6 +65,8 @@ public class SyncJobProcessor {
         } catch (Exception e) {
             SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.UNKNOWN_ERROR, e.getMessage());
             syncJobProcessorService.markFailed(syncJobContext, syncErrorLog);
+        } finally {
+            heartbeatTask.cancel(true);
         }
     }
 

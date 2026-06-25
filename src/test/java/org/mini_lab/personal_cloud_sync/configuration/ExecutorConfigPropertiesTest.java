@@ -13,15 +13,15 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @ActiveProfiles("test")
 @ConfigurationPropertiesScan
-class ExecutorConfigTest extends AbstractIntegrationTest {
+class ExecutorConfigPropertiesTest extends AbstractIntegrationTest {
 
     @Autowired
     ExecutorConfigProperties executorConfigProperties;
 
     @Test
     void createExecutorConfigBean_shouldReturnBeanFromSpringContext() {
-        var context = new AnnotationConfigApplicationContext(SystemTimeConfig.class);
-        assertNotNull(context.getAliases("fixedThreadPool"));
+        var context = new AnnotationConfigApplicationContext(ExecutorConfigProperties.class);
+        assertNotNull(context.getAliases("executor-config"));
     }
 
     @Test

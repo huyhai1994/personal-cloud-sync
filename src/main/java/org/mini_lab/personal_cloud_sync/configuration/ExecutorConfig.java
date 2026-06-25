@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.Map;
+import java.util.concurrent.*;
 
 @Configuration
 @RequiredArgsConstructor
@@ -14,6 +15,16 @@ public class ExecutorConfig {
 
     private final ExecutorConfigProperties executorConfigProperties;
 
+    @Bean(destroyMethod = "shutdown")
+    ScheduledThreadPoolExecutor heartbeatExecutor() {
+        ScheduledThreadPoolExecutor executor =
+                new ScheduledThreadPoolExecutor(executorConfigProperties.getCorePoolSize());
+
+        executor.setRemoveOnCancelPolicy(true);
+        executor.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
+        executor.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
+        return executor;
+    }
 
     @Bean("syncJobExecutor")
     public ThreadPoolTaskExecutor syncJobExecutor() {

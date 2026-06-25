@@ -14,4 +14,5 @@ public class ExecutorConfigProperties {
     private int maximumPoolSize;
     private int queueCapacity;
     private long keepAliveTime;
+    private int heartBeatCorePoolSize;
 }
