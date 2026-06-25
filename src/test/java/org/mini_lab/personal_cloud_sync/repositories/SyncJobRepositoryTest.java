@@ -215,6 +215,38 @@ class SyncJobRepositoryTest extends AbstractIntegrationTest {
         assertEquals(now, updatedSyncJob.getSubmittedAt());
         assertEquals(JobStatus.SUBMITTED, updatedSyncJob.getFinalStatus());
     }
+
+    @Test
+    void markRunningIfSubmitted_shouldUpdateNewStatusAndRecordStartAt() {
+        // given
+        SyncConfig syncConfig = saveSyncConfig("start-at");
+        SyncJob syncJob = buildSyncJob(syncConfig, JobStatus.SUBMITTED);
+        SyncJob persistedSyncJob = syncJobRepository.saveAndFlush(syncJob);
+        Integer id = persistedSyncJob.getId();
+
+        entityManager.clear();
+
+        // when
+        OffsetDateTime now = OffsetDateTime.now(currentTime);
+
+        int updatedCount = syncJobRepository.markRunningIfSubmitted(
+                id,
+                JobStatus.RUNNING,
+                JobStatus.SUBMITTED,
+                now
+        );
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        SyncJob updatedSyncJob = syncJobRepository.findById(id).orElseThrow();
+
+        assertEquals(1, updatedCount);
+        assertEquals(now, updatedSyncJob.getStartAt());
+        assertEquals(JobStatus.RUNNING, updatedSyncJob.getFinalStatus());
+    }
+
     private SyncConfig saveSyncConfig(String pathSuffix) {
         SyncConfig syncConfig = new SyncConfig();
         syncConfig.setSourcePath(sourcePath.resolve(pathSuffix).toString());

@@ -32,7 +32,7 @@ public class SyncJobProcessorService {
     public SyncJobContext markRunning(Integer syncJobId) {
         log.info("MARK_RUNNING_STARTED syncJobId={}", syncJobId);
 
-        int claimedJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.SUBMITTED, JobStatus.RUNNING);
+        int claimedJobCount = syncJobRepository.markRunningIfSubmitted(syncJobId, JobStatus.RUNNING, JobStatus.SUBMITTED, OffsetDateTime.now(systemClock));
         log.info("MARK_RUNNING_UPDATE_DONE syncJobId={} claimedJobCount={}",
                 syncJobId, claimedJobCount);
 
@@ -42,7 +42,6 @@ public class SyncJobProcessorService {
         logStatusChange(JobStatus.SUBMITTED, JobStatus.RUNNING);
 
         SyncJob syncJob = syncJobRepository.getSyncJobById(syncJobId).orElseThrow();
-        syncJob.setStartAt(OffsetDateTime.now(systemClock));
         log.info("MARK_RUNNING_LOAD_JOB_DONE syncJobId={}", syncJobId);
 
         SyncConfig syncConfig = syncJob.getSyncConfig();

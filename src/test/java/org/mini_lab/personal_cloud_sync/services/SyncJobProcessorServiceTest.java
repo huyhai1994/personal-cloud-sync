@@ -1,8 +1,10 @@
 package org.mini_lab.personal_cloud_sync.services;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.dto.SyncJobContext;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
@@ -15,8 +17,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
@@ -40,8 +44,14 @@ class SyncJobProcessorServiceTest {
             ZoneOffset.UTC
     );
 
+    @TempDir
+    Path sourcePath;
+
+    @TempDir
+    Path targetPath;
+
     @BeforeEach
-    void setUp(){
+    void setUp() {
         syncJobProcessorService = new SyncJobProcessorService(syncJobRepository, syncAttemptRecorder, fixedClock);
     }
 
@@ -72,12 +82,13 @@ class SyncJobProcessorServiceTest {
     @Test
     void whenUpdatedFail_fromPendingToRunningState_shouldThrowInvalidJobStateTransitionException() {
         Integer syncJobId = 100;
-        when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.SUBMITTED, JobStatus.RUNNING)).thenReturn(0);
+        when(syncJobRepository.markRunningIfSubmitted(syncJobId, JobStatus.RUNNING, JobStatus.SUBMITTED, OffsetDateTime.now(fixedClock))).thenReturn(0);
         assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markRunning(syncJobId));
-        verify(syncJobRepository).updateStatusIfCurrentStatus(
+        verify(syncJobRepository).markRunningIfSubmitted(
                 syncJobId,
+                JobStatus.RUNNING,
                 JobStatus.SUBMITTED,
-                JobStatus.RUNNING
+                OffsetDateTime.now(fixedClock)
         );
         verify(syncJobRepository, never()).getSyncJobById(anyInt());
         verifyNoMoreInteractions(syncJobRepository);
@@ -87,38 +98,42 @@ class SyncJobProcessorServiceTest {
     void whenUpdatedFail_fromRunningToFailed_shouldThrowInvalidJobStateTransitionException() {
         Integer syncJobId = 100;
         Integer syncJobAttemptId = 100;
-        SyncJobContext syncJobContext = new SyncJobContext(syncJobId, syncJobAttemptId, "/source/test", "/target/test");
+        SyncJobContext syncJobContext = getSyncJobContext(syncJobId, syncJobAttemptId);
         SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.SYNC_PROCESS_ERROR, "Rclone process finished with non-zero exit code");
         when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.FAILED)).thenReturn(0);
         assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markFailed(syncJobContext, syncErrorLog));
+    }
+
+    private @NotNull SyncJobContext getSyncJobContext(Integer syncJobId, Integer syncJobAttemptId) {
+        return new SyncJobContext(syncJobId, syncJobAttemptId, sourcePath.toString(), targetPath.toString());
     }
 
     @Test
     void whenUpdatedFail_fromRunningToSuccess_shouldThrowInvalidJobStateTransitionException() {
         Integer syncJobId = 100;
         Integer syncJobAttemptId = 100;
-        SyncJobContext syncJobContext = new SyncJobContext(syncJobId, syncJobAttemptId, "/source/test", "/target/test");
+        SyncJobContext syncJobContext = getSyncJobContext(syncJobId, syncJobAttemptId);
         when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.SUCCESS)).thenReturn(0);
         assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markSuccess(syncJobContext));
     }
 
     @Test
-    void whenUpdatedTrue_fromPendingToRunningState_shouldReturnSyncConfigContext() {
+    void whenUpdatedTrue_fromSubmittedToRunningState_shouldReturnSyncConfigContext() {
         Integer syncJobId = 100;
         Integer syncJobAttemptId = 100;
         SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
+        syncConfig.setSourcePath(sourcePath.toString());
+        syncConfig.setTargetPath(targetPath.toString());
 
         SyncJob syncJob = new SyncJob();
         syncJob.setId(syncJobId);
         syncJob.setSyncConfig(syncConfig);
         syncJob.setFinalStatus(JobStatus.SUBMITTED);
 
-        when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.SUBMITTED, JobStatus.RUNNING)).thenReturn(1);
+        when(syncJobRepository.markRunningIfSubmitted(syncJobId, JobStatus.RUNNING, JobStatus.SUBMITTED, OffsetDateTime.now(fixedClock))).thenReturn(1);
         when(syncJobRepository.getSyncJobById(syncJobId)).thenReturn(Optional.of(syncJob));
         when(syncAttemptRecorder.startAttempt(syncJob)).thenReturn(syncJobAttemptId);
-        SyncJobContext syncJobContext = new SyncJobContext(syncJobId, syncJobAttemptId, "/source/test", "/target/test");
+        SyncJobContext syncJobContext = getSyncJobContext(syncJobId, syncJobAttemptId);
         assertEquals(syncJobContext, syncJobProcessorService.markRunning(syncJobId));
     }
 }
