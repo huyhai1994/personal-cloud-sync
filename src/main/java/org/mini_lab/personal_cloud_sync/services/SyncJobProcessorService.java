@@ -13,12 +13,16 @@ import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.OffsetDateTime;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SyncJobProcessorService {
     private final SyncJobRepository syncJobRepository;
     private final SyncAttemptRecorder syncAttemptRecorder;
+    private final Clock systemClock;
 
     @Transactional
     @Timed(
@@ -38,6 +42,7 @@ public class SyncJobProcessorService {
         logStatusChange(JobStatus.SUBMITTED, JobStatus.RUNNING);
 
         SyncJob syncJob = syncJobRepository.getSyncJobById(syncJobId).orElseThrow();
+        syncJob.setStartAt(OffsetDateTime.now(systemClock));
         log.info("MARK_RUNNING_LOAD_JOB_DONE syncJobId={}", syncJobId);
 
         SyncConfig syncConfig = syncJob.getSyncConfig();
@@ -89,7 +94,11 @@ public class SyncJobProcessorService {
             description = "Time taken to change state from PENDING to SUBMITTED"
     )
     public void markSubmitted(Integer syncJobId) {
-        int claimedJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.SUBMITTED);
+        int claimedJobCount = syncJobRepository.markSubmittedIfPending(
+                syncJobId,
+                JobStatus.PENDING,
+                JobStatus.SUBMITTED,
+                OffsetDateTime.now(systemClock));
         assertOnlyOneJobClaimed(claimedJobCount);
         logStatusChange(JobStatus.PENDING, JobStatus.SUBMITTED);
     }

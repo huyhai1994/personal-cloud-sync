@@ -1,5 +1,6 @@
 package org.mini_lab.personal_cloud_sync.services;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mini_lab.personal_cloud_sync.dto.SyncJobContext;
@@ -14,6 +15,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -30,6 +34,16 @@ class SyncJobProcessorServiceTest {
 
     @InjectMocks
     SyncJobProcessorService syncJobProcessorService;
+
+    private final Clock fixedClock = Clock.fixed(
+            Instant.parse("2026-06-24T10:00:00Z"),
+            ZoneOffset.UTC
+    );
+
+    @BeforeEach
+    void setUp(){
+        syncJobProcessorService = new SyncJobProcessorService(syncJobRepository, syncAttemptRecorder, fixedClock);
+    }
 
     @Test
     void whenUpdatedFail_fromPendingToSubmitFail_shouldThrowInvalidJobStateTransitionException() {

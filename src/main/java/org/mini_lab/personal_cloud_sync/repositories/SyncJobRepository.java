@@ -68,5 +68,18 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Integer> {
             """)
     void updateHeartBeatAtForTest(@Param("id") Integer id,
                                   @Param("heartBeatAt") OffsetDateTime heartBeatAt);
+
+    @Modifying
+    @Query("""
+                update SyncJob sj
+                set sj.finalStatus = :submitted,
+                    sj.submittedAt = :now
+                where sj.id = :id
+                  and sj.finalStatus = :pending
+            """)
+    int markSubmittedIfPending(@Param("id") Integer syncJobId,
+                               @Param("pending") JobStatus pending,
+                               @Param("submitted") JobStatus submitted,
+                               @Param("now") OffsetDateTime now);
 }
 
