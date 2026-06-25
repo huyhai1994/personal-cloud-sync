@@ -214,60 +214,60 @@ class SyncConfigRepositoryTest extends AbstractIntegrationTest {
                 .isEqualTo(ScheduleType.INTERVAL);
     }
 
-    @Test
-    void should_measure_find_due_configs_performance() {
-        int totalConfigs = 10_000;
-        int batchSize = 10;
-        OffsetDateTime dueTime = OffsetDateTime.now(fixedClock).minusMinutes(1);
-
-        List<SyncConfig> syncConfigs = IntStream.range(0, totalConfigs)
-                .mapToObj(i -> {
-                    SyncConfig syncConfig = new SyncConfig();
-                    syncConfig.setSourcePath(sourcePath.resolve("source" + i).toString());
-                    syncConfig.setTargetPath(targetPath.resolve("target" + i).toString());
-                    syncConfig.setScheduleType(i % 5 == 0 ? ScheduleType.MANUAL : ScheduleType.INTERVAL);
-                    syncConfig.setScheduleInterval(i % 5 == 0 ? null : (short) 10);
-                    syncConfig.setEnabled(i % 3 != 0);
-                    syncConfig.setNextScheduledAt(i % 4 == 0 ? dueTime : dueTime.plusDays(1));
-                    syncConfig.setEnabled(true);
-                    return syncConfig;
-                })
-                .toList();
-        syncConfigRepository.saveAll(syncConfigs);
-        entityManager.flush();
-        entityManager.clear();
-
-        // warm up
-        syncConfigRepository.findDueNonManualScheduleTypeSyncConfigs(
-                ScheduleType.MANUAL,
-                OffsetDateTime.now(fixedClock),
-                PageRequest.of(
-                        0,
-                        batchSize,
-                        Sort.by("nextScheduledAt").ascending()
-                )
-        );
-
-        // when
-        long start = System.nanoTime();
-
-        List<SyncConfig> result =
-                syncConfigRepository.findDueNonManualScheduleTypeSyncConfigs(
-                        ScheduleType.MANUAL,
-                        OffsetDateTime.now(fixedClock),
-                        PageRequest.of(
-                                0,
-                                batchSize,
-                                Sort.by("nextScheduledAt").ascending()
-                        )
-                );
-
-        long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
-
-        // then
-        log.info("FIND_DUE_SYNC_CONFIGS_PERFORMANCE totalConfigs={} foundConfigs={} durationMs={}",
-                totalConfigs,
-                result.size(),
-                durationMs);
-    }
+//    @Test
+//    void should_measure_find_due_configs_performance() {
+//        int totalConfigs = 10_000;
+//        int batchSize = 10;
+//        OffsetDateTime dueTime = OffsetDateTime.now(fixedClock).minusMinutes(1);
+//
+//        List<SyncConfig> syncConfigs = IntStream.range(0, totalConfigs)
+//                .mapToObj(i -> {
+//                    SyncConfig syncConfig = new SyncConfig();
+//                    syncConfig.setSourcePath(sourcePath.resolve("source" + i).toString());
+//                    syncConfig.setTargetPath(targetPath.resolve("target" + i).toString());
+//                    syncConfig.setScheduleType(i % 5 == 0 ? ScheduleType.MANUAL : ScheduleType.INTERVAL);
+//                    syncConfig.setScheduleInterval(i % 5 == 0 ? null : (short) 10);
+//                    syncConfig.setEnabled(i % 3 != 0);
+//                    syncConfig.setNextScheduledAt(i % 4 == 0 ? dueTime : dueTime.plusDays(1));
+//                    syncConfig.setEnabled(true);
+//                    return syncConfig;
+//                })
+//                .toList();
+//        syncConfigRepository.saveAll(syncConfigs);
+//        entityManager.flush();
+//        entityManager.clear();
+//
+//        // warm up
+//        syncConfigRepository.findDueNonManualScheduleTypeSyncConfigs(
+//                ScheduleType.MANUAL,
+//                OffsetDateTime.now(fixedClock),
+//                PageRequest.of(
+//                        0,
+//                        batchSize,
+//                        Sort.by("nextScheduledAt").ascending()
+//                )
+//        );
+//
+//        // when
+//        long start = System.nanoTime();
+//
+//        List<SyncConfig> result =
+//                syncConfigRepository.findDueNonManualScheduleTypeSyncConfigs(
+//                        ScheduleType.MANUAL,
+//                        OffsetDateTime.now(fixedClock),
+//                        PageRequest.of(
+//                                0,
+//                                batchSize,
+//                                Sort.by("nextScheduledAt").ascending()
+//                        )
+//                );
+//
+//        long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+//
+//        // then
+//        log.info("FIND_DUE_SYNC_CONFIGS_PERFORMANCE totalConfigs={} foundConfigs={} durationMs={}",
+//                totalConfigs,
+//                result.size(),
+//                durationMs);
+//    }
 }

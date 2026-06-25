@@ -56,7 +56,7 @@ public class SyncJobProcessorService {
     )
     public void markFailed(SyncJobContext syncJobContext, SyncErrorLog syncErrorLog) {
         Integer syncJobId = syncJobContext.syncJobId();
-        int claimJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.FAILED);
+        int claimJobCount = syncJobRepository.markFailedIfRunning(syncJobId, JobStatus.FAILED, JobStatus.RUNNING, OffsetDateTime.now(systemClock));
         assertOnlyOneJobClaimed(claimJobCount);
         logStatusChange(JobStatus.RUNNING, JobStatus.FAILED);
         syncAttemptRecorder.markFailed(syncJobContext.syncAttemptId(), syncErrorLog);
@@ -70,7 +70,7 @@ public class SyncJobProcessorService {
     public void markSuccess(SyncJobContext syncJobContext) {
         Integer syncJobId = syncJobContext.syncJobId();
         Integer syncAttemptId = syncJobContext.syncAttemptId();
-        int claimedJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.SUCCESS);
+        int claimedJobCount = syncJobRepository.markSuccessIfRunning(syncJobId, JobStatus.SUCCESS, JobStatus.RUNNING, OffsetDateTime.now(systemClock));
         assertOnlyOneJobClaimed(claimedJobCount);
         logStatusChange(JobStatus.RUNNING, JobStatus.SUCCESS);
         syncAttemptRecorder.markSuccess(syncAttemptId);
@@ -82,7 +82,7 @@ public class SyncJobProcessorService {
             description = "Time taken to change state from PENDING to SUBMIT_FAILED"
     )
     public void markSubmitFailed(Integer syncJobId) {
-        int claimedJobCount = syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.SUBMIT_FAILED);
+        int claimedJobCount = syncJobRepository.markSubmitFailedIfPending(syncJobId, JobStatus.SUBMIT_FAILED, JobStatus.PENDING, OffsetDateTime.now(systemClock));
         assertOnlyOneJobClaimed(claimedJobCount);
         logStatusChange(JobStatus.PENDING, JobStatus.SUBMIT_FAILED);
     }

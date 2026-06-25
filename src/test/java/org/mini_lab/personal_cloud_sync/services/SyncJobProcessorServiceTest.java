@@ -58,24 +58,26 @@ class SyncJobProcessorServiceTest {
     @Test
     void whenUpdatedFail_fromPendingToSubmitFail_shouldThrowInvalidJobStateTransitionException() {
         Integer syncJobId = 100;
-        when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.SUBMIT_FAILED)).thenReturn(0);
+        when(syncJobRepository.markSubmitFailedIfPending(syncJobId, JobStatus.SUBMIT_FAILED, JobStatus.PENDING, OffsetDateTime.now(fixedClock))).thenReturn(0);
         assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markSubmitFailed(syncJobId));
-        verify(syncJobRepository).updateStatusIfCurrentStatus(
+        verify(syncJobRepository).markSubmitFailedIfPending(
                 syncJobId,
+                JobStatus.SUBMIT_FAILED,
                 JobStatus.PENDING,
-                JobStatus.SUBMIT_FAILED
+                OffsetDateTime.now(fixedClock)
         );
     }
 
     @Test
     void whenUpdatedSuccess_fromPendingToSubmitFail_shouldNotThrow() {
         Integer syncJobId = 100;
-        when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.PENDING, JobStatus.SUBMIT_FAILED)).thenReturn(1);
+        when(syncJobRepository.markSubmitFailedIfPending(syncJobId, JobStatus.SUBMIT_FAILED, JobStatus.PENDING, OffsetDateTime.now(fixedClock))).thenReturn(1);
         assertDoesNotThrow(() -> syncJobProcessorService.markSubmitFailed(syncJobId));
-        verify(syncJobRepository).updateStatusIfCurrentStatus(
+        verify(syncJobRepository).markSubmitFailedIfPending(
                 syncJobId,
+                JobStatus.SUBMIT_FAILED,
                 JobStatus.PENDING,
-                JobStatus.SUBMIT_FAILED
+                OffsetDateTime.now(fixedClock)
         );
     }
 
@@ -100,7 +102,7 @@ class SyncJobProcessorServiceTest {
         Integer syncJobAttemptId = 100;
         SyncJobContext syncJobContext = getSyncJobContext(syncJobId, syncJobAttemptId);
         SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.SYNC_PROCESS_ERROR, "Rclone process finished with non-zero exit code");
-        when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.FAILED)).thenReturn(0);
+        when(syncJobRepository.markFailedIfRunning(syncJobId, JobStatus.FAILED, JobStatus.RUNNING, OffsetDateTime.now(fixedClock))).thenReturn(0);
         assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markFailed(syncJobContext, syncErrorLog));
     }
 
@@ -113,7 +115,7 @@ class SyncJobProcessorServiceTest {
         Integer syncJobId = 100;
         Integer syncJobAttemptId = 100;
         SyncJobContext syncJobContext = getSyncJobContext(syncJobId, syncJobAttemptId);
-        when(syncJobRepository.updateStatusIfCurrentStatus(syncJobId, JobStatus.RUNNING, JobStatus.SUCCESS)).thenReturn(0);
+        when(syncJobRepository.markSuccessIfRunning(syncJobId, JobStatus.SUCCESS, JobStatus.RUNNING, OffsetDateTime.now(fixedClock))).thenReturn(0);
         assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markSuccess(syncJobContext));
     }
 
