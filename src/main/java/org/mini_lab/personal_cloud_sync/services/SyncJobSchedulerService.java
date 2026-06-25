@@ -1,5 +1,6 @@
 package org.mini_lab.personal_cloud_sync.services;
 
+import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mini_lab.personal_cloud_sync.component.NextScheduledAtCalculationStrategy;
@@ -33,6 +34,10 @@ public class SyncJobSchedulerService {
     private final Clock systemClock;
 
     @Transactional
+    @Timed(
+            value = "sync.job.scheduler.create.due.jobs",
+            description = "Time taken to create due sync jobs"
+    )
     public List<Integer> createDueJobs() {
         List<Integer> syncJobs = new ArrayList<>();
         int batchSize = syncJobSchedulerProperties.getBatchSize();

@@ -14,7 +14,7 @@ public class AbstractIntegrationTest {
                 .withDatabaseName("personal_sync_db")
                 .withUsername("test")
                 .withPassword("test")
-                .withReuse(true);
+                .withReuse(false);
 
         mysqldb.start();
     }

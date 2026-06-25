@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
 
 import java.time.Instant;
@@ -31,14 +32,27 @@ public class SyncJob {
     private JobStatus finalStatus;
 
     @CreationTimestamp
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    @Column(name = "submitted_at")
+    private OffsetDateTime submittedAt;
+
+    @Column(name = "submit_failed_at")
+    private OffsetDateTime submitFailedAt;
 
     @Column(name = "start_at")
     private OffsetDateTime startAt;
 
     @Column(name = "finished_at")
     private OffsetDateTime finishedAt;
+
+    @Column(name = "heartbeat_at")
+    private OffsetDateTime heartBeatAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
     @Column(name = "retry_count", columnDefinition = "TINYINT")
     private Byte retryCount;

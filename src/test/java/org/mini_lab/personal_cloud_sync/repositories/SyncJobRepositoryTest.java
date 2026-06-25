@@ -166,11 +166,11 @@ class SyncJobRepositoryTest extends AbstractIntegrationTest {
         SyncConfig notTimeOutPersistedSyncConfig = saveSyncConfig("not-timed-out-running-job");
 
         SyncJob timeoutSyncJob = buildSyncJob(timoutPersistedSyncConfig, JobStatus.RUNNING);
-        timeoutSyncJob.setFinishedAt(OffsetDateTime.now(currentTime).minusMinutes(20));
+        timeoutSyncJob.setHeartBeatAt(OffsetDateTime.now(currentTime).minusMinutes(20));
         syncJobRepository.saveAndFlush(timeoutSyncJob);
 
         SyncJob notTimeoutSyncJob = buildSyncJob(notTimeOutPersistedSyncConfig, JobStatus.RUNNING);
-        notTimeoutSyncJob.setFinishedAt(OffsetDateTime.now(currentTime).minusMinutes(5));
+        notTimeoutSyncJob.setHeartBeatAt(OffsetDateTime.now(currentTime).minusMinutes(5));
         syncJobRepository.saveAndFlush(notTimeoutSyncJob);
 
         entityManager.flush();
@@ -179,8 +179,7 @@ class SyncJobRepositoryTest extends AbstractIntegrationTest {
         List<SyncJob> timedOutRunningJobs =
                 syncJobRepository.findTimedOutRunningJobs(
                         JobStatus.RUNNING,
-                        OffsetDateTime.now(currentTime),
-                        15
+                        OffsetDateTime.now(currentTime).minusMinutes(15L)
                 );
 
         assertEquals(1, timedOutRunningJobs.size());

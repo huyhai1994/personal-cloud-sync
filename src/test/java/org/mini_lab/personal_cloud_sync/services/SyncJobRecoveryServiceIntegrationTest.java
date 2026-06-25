@@ -74,19 +74,13 @@ class SyncJobRecoveryServiceIntegrationTest extends AbstractIntegrationTest {
         SyncAttempt runningAttempt = saveSyncAttempt(runningJob, JobStatus.RUNNING);
 
         transactionTemplate.executeWithoutResult(status ->
-                syncJobRepository.updateUpdatedAtForTest(
+                syncJobRepository.updateHeartBeatAtForTest(
                         runningJob.getId(),
-                        OffsetDateTime.now().minusMinutes(20)
+                        OffsetDateTime.now().minusMinutes(30)
                 )
         );
 
-        entityManager.flush();
-        entityManager.clear();
-
         syncJobRecoveryService.findAndUpdateTimedOutRunningJobs();
-
-        entityManager.flush();
-        entityManager.clear();
 
         SyncJob recoveredJob =
                 syncJobRepository.findById(runningJob.getId()).orElseThrow();
@@ -97,7 +91,7 @@ class SyncJobRecoveryServiceIntegrationTest extends AbstractIntegrationTest {
         assertAll(
                 () -> assertEquals(JobStatus.FAILED, recoveredJob.getFinalStatus()),
                 () -> assertEquals(JobStatus.FAILED, recoveredAttempt.getAttemptStatus()),
-                () -> assertEquals(SyncErrorCode.SYNC_PROCESS_ERROR, recoveredAttempt.getErrorCode()),
+                () -> assertEquals(SyncErrorCode.RECOVERY_TIMEOUT, recoveredAttempt.getErrorCode()),
                 () -> assertNotNull(recoveredAttempt.getErrorMessage())
         );
     }
@@ -108,7 +102,7 @@ class SyncJobRecoveryServiceIntegrationTest extends AbstractIntegrationTest {
         SyncAttempt runningAttempt = saveSyncAttempt(runningJob, JobStatus.RUNNING);
 
         transactionTemplate.executeWithoutResult(status ->
-                syncJobRepository.updateUpdatedAtForTest(
+                syncJobRepository.updateHeartBeatAtForTest(
                         runningJob.getId(),
                         OffsetDateTime.now().minusMinutes(5)
                 )
@@ -133,11 +127,11 @@ class SyncJobRecoveryServiceIntegrationTest extends AbstractIntegrationTest {
         SyncJob failedJob = saveSyncJob(syncConfig, JobStatus.FAILED);
 
         transactionTemplate.executeWithoutResult(status -> {
-            syncJobRepository.updateUpdatedAtForTest(
+            syncJobRepository.updateHeartBeatAtForTest(
                     successJob.getId(),
                     OffsetDateTime.now().minusMinutes(30)
             );
-            syncJobRepository.updateUpdatedAtForTest(
+            syncJobRepository.updateHeartBeatAtForTest(
                     failedJob.getId(),
                     OffsetDateTime.now().minusMinutes(30)
             );

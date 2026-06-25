@@ -1,5 +1,6 @@
 package org.mini_lab.personal_cloud_sync.repositories;
 
+import io.micrometer.core.annotation.Timed;
 import jakarta.persistence.LockModeType;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
@@ -17,14 +18,17 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Integer> {
     @Query("""
             SELECT sj from SyncJob as sj
                     where sj.finalStatus = :jobStatus
-                    and sj.createdAt < :currentTime - :timeOutLimit minute
+                    and sj.heartBeatAt < :cutOffTime
             """
     )
     @EntityGraph(attributePaths = "syncAttempts")
+    @Timed(
+            value = "sync.job.repository.find_timed_out_running_jobs",
+            description = "Time taken to find timed out running jobs"
+    )
     List<SyncJob> findTimedOutRunningJobs(
             @Param("jobStatus") JobStatus jobStatus,
-            @Param("currentTime") OffsetDateTime currentTime,
-            @Param("timeOutLimit") Integer timeOutLimit);
+            @Param("cutOffTime") OffsetDateTime cutOffTime);
 
     List<SyncJob> getAllByFinalStatus(JobStatus jobStatus, Pageable pageable);
 
@@ -59,10 +63,10 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Integer> {
     @Modifying
     @Query("""
                 update SyncJob sj
-                set sj.finishedAt =:finishedAt
+                set sj.heartBeatAt =:heartBeatAt
                 where sj.id = :id
             """)
-    void updateUpdatedAtForTest(@Param("id") Integer id,
-                                @Param("finishedAt") OffsetDateTime finishedAt);
+    void updateHeartBeatAtForTest(@Param("id") Integer id,
+                                  @Param("heartBeatAt") OffsetDateTime heartBeatAt);
 }
 

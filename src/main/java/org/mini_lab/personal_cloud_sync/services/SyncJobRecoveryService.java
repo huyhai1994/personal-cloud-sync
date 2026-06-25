@@ -30,8 +30,7 @@ public class SyncJobRecoveryService {
         List<SyncJob> timedOutRunningJobs =
                 syncJobRepository.findTimedOutRunningJobs(
                         JobStatus.RUNNING,
-                        OffsetDateTime.now(systemClock),
-                        recoverySchedulerProperties.getRunningJobTimedOutLimit()
+                        OffsetDateTime.now(systemClock).minusMinutes(recoverySchedulerProperties.getRunningJobTimedOutLimit())
                 );
 
         timedOutRunningJobs.forEach(job -> {
