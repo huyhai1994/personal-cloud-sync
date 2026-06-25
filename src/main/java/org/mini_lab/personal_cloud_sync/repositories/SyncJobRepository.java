@@ -78,9 +78,9 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Integer> {
                   and sj.finalStatus = :running
             """)
     int markFailedIfRunning(@Param("id") Integer syncJobId,
-                             @Param("failed") JobStatus failed,
-                             @Param("running") JobStatus running,
-                             @Param("now") OffsetDateTime now);
+                            @Param("failed") JobStatus failed,
+                            @Param("running") JobStatus running,
+                            @Param("now") OffsetDateTime now);
 
     @Modifying
     @Query("""
@@ -91,9 +91,20 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Integer> {
                   and sj.finalStatus = :running
             """)
     int markSuccessIfRunning(@Param("id") Integer syncJobId,
-                               @Param("success") JobStatus success,
-                               @Param("running") JobStatus running,
-                               @Param("now") OffsetDateTime now);
+                             @Param("success") JobStatus success,
+                             @Param("running") JobStatus running,
+                             @Param("now") OffsetDateTime now);
+
+    @Modifying
+    @Query("""
+                update SyncJob sj
+                set sj.heartBeatAt = :now
+                where sj.id = :id
+                  and sj.finalStatus = :running
+            """)
+    int updateHeartbeatIfRunning(@Param("id") Integer id,
+                                 @Param("running") JobStatus running,
+                                 @Param("now") OffsetDateTime now);
 
     @Modifying
     @Query("""

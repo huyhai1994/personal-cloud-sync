@@ -279,6 +279,36 @@ class SyncJobRepositoryTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void updateHeartBeatIfRunning_shouldUpdateHeartBeatAt() {
+        // given
+        SyncConfig syncConfig = saveSyncConfig("heartbeat-at");
+        SyncJob syncJob = buildSyncJob(syncConfig, JobStatus.RUNNING);
+        SyncJob persistedSyncJob = syncJobRepository.saveAndFlush(syncJob);
+        Integer id = persistedSyncJob.getId();
+
+        entityManager.clear();
+
+        // when
+        OffsetDateTime now = OffsetDateTime.now(currentTime);
+
+        int updatedCount = syncJobRepository.updateHeartbeatIfRunning(
+                id,
+                JobStatus.RUNNING,
+                now
+        );
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        SyncJob updatedSyncJob = syncJobRepository.findById(id).orElseThrow();
+
+        assertEquals(1, updatedCount);
+        assertEquals(now, updatedSyncJob.getHeartBeatAt());
+        assertEquals(JobStatus.RUNNING, updatedSyncJob.getFinalStatus());
+    }
+
+    @Test
     void markSuccessIfRunning_shouldUpdateNewStatusAndRecordFinishedAt() {
         // given
         SyncConfig syncConfig = saveSyncConfig("finished-at");
