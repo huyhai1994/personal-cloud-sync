@@ -72,6 +72,32 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Integer> {
     @Modifying
     @Query("""
                 update SyncJob sj
+                set sj.finalStatus = :failed,
+                    sj.finishedAt = :now
+                where sj.id = :id
+                  and sj.finalStatus = :running
+            """)
+    int markFailedIfRunning(@Param("id") Integer syncJobId,
+                             @Param("failed") JobStatus failed,
+                             @Param("running") JobStatus running,
+                             @Param("now") OffsetDateTime now);
+
+    @Modifying
+    @Query("""
+                update SyncJob sj
+                set sj.finalStatus = :success,
+                    sj.finishedAt = :now
+                where sj.id = :id
+                  and sj.finalStatus = :running
+            """)
+    int markSuccessIfRunning(@Param("id") Integer syncJobId,
+                               @Param("success") JobStatus success,
+                               @Param("running") JobStatus running,
+                               @Param("now") OffsetDateTime now);
+
+    @Modifying
+    @Query("""
+                update SyncJob sj
                 set sj.finalStatus = :running,
                     sj.startAt = :now
                 where sj.id = :id

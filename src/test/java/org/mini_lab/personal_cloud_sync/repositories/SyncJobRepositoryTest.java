@@ -247,6 +247,68 @@ class SyncJobRepositoryTest extends AbstractIntegrationTest {
         assertEquals(JobStatus.RUNNING, updatedSyncJob.getFinalStatus());
     }
 
+    @Test
+    void markSuccessIfRunning_shouldUpdateNewStatusAndRecordFinishedAt() {
+        // given
+        SyncConfig syncConfig = saveSyncConfig("finished-at");
+        SyncJob syncJob = buildSyncJob(syncConfig, JobStatus.RUNNING);
+        SyncJob persistedSyncJob = syncJobRepository.saveAndFlush(syncJob);
+        Integer id = persistedSyncJob.getId();
+
+        entityManager.clear();
+
+        // when
+        OffsetDateTime now = OffsetDateTime.now(currentTime);
+
+        int updatedCount = syncJobRepository.markSuccessIfRunning(
+                id,
+                JobStatus.SUCCESS,
+                JobStatus.RUNNING,
+                now
+        );
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        SyncJob updatedSyncJob = syncJobRepository.findById(id).orElseThrow();
+
+        assertEquals(1, updatedCount);
+        assertEquals(now, updatedSyncJob.getFinishedAt());
+        assertEquals(JobStatus.SUCCESS, updatedSyncJob.getFinalStatus());
+    }
+
+    @Test
+    void markFailedIfRunning_shouldUpdateNewStatusAndRecordFinishedAt() {
+        // given
+        SyncConfig syncConfig = saveSyncConfig("finished-at");
+        SyncJob syncJob = buildSyncJob(syncConfig, JobStatus.RUNNING);
+        SyncJob persistedSyncJob = syncJobRepository.saveAndFlush(syncJob);
+        Integer id = persistedSyncJob.getId();
+
+        entityManager.clear();
+
+        // when
+        OffsetDateTime now = OffsetDateTime.now(currentTime);
+
+        int updatedCount = syncJobRepository.markFailedIfRunning(
+                id,
+                JobStatus.FAILED,
+                JobStatus.RUNNING,
+                now
+        );
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        SyncJob updatedSyncJob = syncJobRepository.findById(id).orElseThrow();
+
+        assertEquals(1, updatedCount);
+        assertEquals(now, updatedSyncJob.getFinishedAt());
+        assertEquals(JobStatus.FAILED, updatedSyncJob.getFinalStatus());
+    }
+
     private SyncConfig saveSyncConfig(String pathSuffix) {
         SyncConfig syncConfig = new SyncConfig();
         syncConfig.setSourcePath(sourcePath.resolve(pathSuffix).toString());
