@@ -120,5 +120,19 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Integer> {
                                @Param("pending") JobStatus pending,
                                @Param("submitted") JobStatus submitted,
                                @Param("now") OffsetDateTime now);
+
+    @Modifying
+    @Query("""
+                update SyncJob sj
+                set sj.finalStatus = :submitFailed,
+                    sj.finishedAt = :now
+                where sj.id = :id
+                  and sj.finalStatus = :pending
+            """)
+    int markSubmitFailedIfPending(@Param("id") Integer syncJobId,
+                                  @Param("submitFailed") JobStatus submitFailed,
+                                  @Param("pending") JobStatus pending,
+                                  @Param("now") OffsetDateTime now);
+
 }
 

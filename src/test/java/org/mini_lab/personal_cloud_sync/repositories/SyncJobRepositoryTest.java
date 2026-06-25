@@ -217,6 +217,37 @@ class SyncJobRepositoryTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void markSubmitFailedIfPending_shouldUpdateNewStatusAndRecordSubmitFailedAt() {
+        // given
+        SyncConfig syncConfig = saveSyncConfig("submit-failed-at");
+        SyncJob syncJob = buildSyncJob(syncConfig, JobStatus.PENDING);
+        SyncJob persistedSyncJob = syncJobRepository.saveAndFlush(syncJob);
+        Integer id = persistedSyncJob.getId();
+
+        entityManager.clear();
+
+        // when
+        OffsetDateTime now = OffsetDateTime.now(currentTime);
+
+        int updatedCount = syncJobRepository.markSubmittedIfPending(
+                id,
+                JobStatus.PENDING,
+                JobStatus.SUBMIT_FAILED,
+                now
+        );
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        SyncJob updatedSyncJob = syncJobRepository.findById(id).orElseThrow();
+
+        assertEquals(1, updatedCount);
+        assertEquals(now, updatedSyncJob.getSubmittedAt());
+        assertEquals(JobStatus.SUBMIT_FAILED, updatedSyncJob.getFinalStatus());
+    }
+
+    @Test
     void markRunningIfSubmitted_shouldUpdateNewStatusAndRecordStartAt() {
         // given
         SyncConfig syncConfig = saveSyncConfig("start-at");
