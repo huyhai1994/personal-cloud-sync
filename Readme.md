@@ -674,40 +674,9 @@ User
 ## 7. Main Components
 
 ```text
-SyncConfigController
-SyncConfigService
-SyncConfigValidator
-
-SyncJobController
-SyncJobApplicationService
-SyncJobCommandService
-SyncJobDispatcher
-SyncJobTask
-SyncJobProcessor
-
-RcloneExecutor
-RcloneCommandBuilder
-RcloneCommandExecutor
-
-SyncJobRecoveryScheduler
-SyncJobRecoveryService
-
-SyncErrorCodeResolver
-ExceptionControllerAdvice
 ```
 
 ### Responsibility
-
-| Component | Responsibility |
-|---|---|
-| SyncJobApplicationService | API use-case orchestration |
-| SyncJobCommandService | Transactional job state changes |
-| SyncJobDispatcher | Submit job to executor/queue |
-| SyncJobTask | Runnable wrapper |
-| SyncJobProcessor | Real job processing logic |
-| RcloneExecutor | Execute rclone sync |
-| SyncErrorCodeResolver | Map error signal to SyncErrorCode |
-| SyncJobRecoveryService | Recover stuck SUBMITTED/RUNNING jobs |
 
 ---
 
