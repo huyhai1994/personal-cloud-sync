@@ -113,11 +113,18 @@ public class SyncJobProcessorService {
         }
     }
 
+    @Transactional
     public void updateHeartbeat(Integer syncJobId) {
         int claimedJobCount = syncJobRepository.updateHeartbeatIfRunning(
                 syncJobId,
                 JobStatus.RUNNING,
                 OffsetDateTime.now(systemClock));
+        if (claimedJobCount == 0) {
+            log.info("HEARTBEAT_SKIPPED syncJobId={} reason=job_not_running", syncJobId);
+            return;
+        }
+
+        log.info("HEARTBEAT_UPDATED syncJobId={}", syncJobId);
         assertOnlyOneJobClaimed(claimedJobCount);
     }
 }
