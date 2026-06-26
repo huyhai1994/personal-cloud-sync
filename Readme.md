@@ -53,15 +53,15 @@ Các thông tin chính của `sync_job`:
 
 ```text
 id
-syncConfigId
-triggerType = MANUAL | SCHEDULED
-status
-retryCount
-createdAt
-submittedAt
-startedAt
-heartbeatAt
-finishedAt
+sync_config_id
+final_status
+retry_count
+created_at
+submitted_at
+submit_failed_at
+start_at
+heartbeat_at
+finished_at
 ```
 
 ### 2.3 Sync Attempt
