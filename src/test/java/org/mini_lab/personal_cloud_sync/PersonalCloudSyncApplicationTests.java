@@ -1,5 +1,6 @@
 package org.mini_lab.personal_cloud_sync;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -9,15 +10,19 @@ import org.mini_lab.personal_cloud_sync.repositories.SyncAttemptRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
 import org.mini_lab.personal_cloud_sync.support.AbstractIntegrationTest;
+import org.mini_lab.personal_cloud_sync.support.FakeRCloneConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.file.Path;
 import java.time.LocalTime;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -26,11 +31,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(FakeRCloneConfig.class)
 @ActiveProfiles("test")
 class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private SyncConfigRepository syncConfigRepository;
@@ -54,38 +63,35 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
         syncConfigRepository.deleteAllInBatch();
     }
 
-    private String validRequestBody() {
-        return """
-                {
-                  "sourcePath": "%s",
-                  "targetPath": "%s"
-                }
-                """.formatted(sourcePath.toString(), targetPath.toString());
+    private String json(Map<String, Object> body) throws Exception {
+        return objectMapper.writeValueAsString(body);
     }
 
-    private String requestBodyWithSchedule(String scheduleFields) {
-        return """
-                {
-                  "sourcePath": "%s",
-                  "targetPath": "%s",
-                  %s
-                }
-                """.formatted(sourcePath.toString(), targetPath.toString(), scheduleFields);
+    private Map<String, Object> validBody() {
+        return new HashMap<>(Map.of(
+                "sourcePath", sourcePath.toString(),
+                "targetPath", targetPath.toString()
+        ));
+    }
+
+    private String validRequestBody() throws Exception {
+        return json(validBody());
+    }
+
+    private String requestBodyWithSchedule(Map<String, Object> scheduleFields) throws Exception {
+        Map<String, Object> body = validBody();
+        body.putAll(scheduleFields);
+        return json(body);
     }
 
     @Test
     void create_sync_config_when_max_retry_exceeded_should_return_400() throws Exception {
-        String requestBody = """
-                {
-                  "sourcePath": "%s",
-                  "targetPath": "%s",
-                  "maxRetry": 10
-                }
-                """.formatted(sourcePath.toString(), targetPath.toString());
+        Map<String, Object> body = validBody();
+        body.put("maxRetry", 10);
 
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
+                        .content(json(body)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
                         .value("Maximum Retry Count Exceed should less or equal 5"));
@@ -112,13 +118,13 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void create_sync_config_when_sourcePath_null_should_return_400() throws Exception {
+        String requestBody = json(Map.of(
+                "targetPath", targetPath.toString()
+        ));
+
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "targetPath": "/target/test"
-                                }
-                                """))
+                        .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
                         .value("Source/Target Path not valid"));
@@ -126,13 +132,13 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void create_sync_config_when_targetPath_null_should_return_400() throws Exception {
+        String requestBody = json(Map.of(
+                "sourcePath", sourcePath.toString()
+        ));
+
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "sourcePath": "/source/test"
-                                }
-                                """))
+                        .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
                         .value("Source/Target Path not valid"));
@@ -140,14 +146,14 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void create_sync_config_when_sourcePath_blank_should_return_400() throws Exception {
+        String requestBody = json(Map.of(
+                "sourcePath", "",
+                "targetPath", targetPath.toString()
+        ));
+
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "sourcePath": "",
-                                  "targetPath": "/target/test"
-                                }
-                                """))
+                        .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
                         .value("Source/Target Path not valid"));
@@ -155,14 +161,14 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void create_sync_config_when_targetPath_blank_should_return_400() throws Exception {
+        String requestBody = json(Map.of(
+                "sourcePath", sourcePath.toString(),
+                "targetPath", ""
+        ));
+
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "sourcePath": "/source/test",
-                                  "targetPath": ""
-                                }
-                                """))
+                        .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
                         .value("Source/Target Path not valid"));
@@ -170,14 +176,16 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void create_sync_config_when_source_path_not_exist_should_return_400() throws Exception {
+        Path notExistsSourcePath = sourcePath.resolve("not-exists");
+
+        String requestBody = json(Map.of(
+                "sourcePath", notExistsSourcePath.toString(),
+                "targetPath", targetPath.toString()
+        ));
+
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "sourcePath": "/source/test",
-                                  "targetPath": "/target/test"
-                                }
-                                """))
+                        .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
                         .value("Source/Target Path not valid"));
@@ -193,10 +201,10 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void create_sync_config_schedule_type_interval_runtime_not_null_should_return_400() throws Exception {
-        String requestBody = requestBodyWithSchedule("""
-                "scheduleType":"INTERVAL",
-                "runTime":"10:00"
-                """);
+        String requestBody = requestBodyWithSchedule(Map.of(
+                "scheduleType", "INTERVAL",
+                "runTime", "10:00"
+        ));
 
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -209,9 +217,9 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void create_sync_config_schedule_type_scheduleInterval_null_should_return_400() throws Exception {
-        String requestBody = requestBodyWithSchedule("""
-                "scheduleType":"INTERVAL"
-                """);
+        String requestBody = requestBodyWithSchedule(Map.of(
+                "scheduleType", "INTERVAL"
+        ));
 
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -224,10 +232,10 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void create_sync_config_schedule_type_scheduleInterval_lessThan0_shouldReturn400() throws Exception {
-        String negativeIntervalRequest = requestBodyWithSchedule("""
-                "scheduleType":"INTERVAL",
-                "scheduleInterval":-1
-                """);
+        String negativeIntervalRequest = requestBodyWithSchedule(Map.of(
+                "scheduleType", "INTERVAL",
+                "scheduleInterval", -1
+        ));
 
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -237,10 +245,10 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.message")
                         .value("scheduleInterval must be greater than 0"));
 
-        String zeroIntervalRequest = requestBodyWithSchedule("""
-                "scheduleType":"INTERVAL",
-                "scheduleInterval":0
-                """);
+        String zeroIntervalRequest = requestBodyWithSchedule(Map.of(
+                "scheduleType", "INTERVAL",
+                "scheduleInterval", 0
+        ));
 
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -253,10 +261,10 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void create_sync_config_schedule_type_scheduleInterval_shouldReturn201() throws Exception {
-        String requestBody = requestBodyWithSchedule("""
-                "scheduleType":"INTERVAL",
-                "scheduleInterval":30
-                """);
+        String requestBody = requestBodyWithSchedule(Map.of(
+                "scheduleType", "INTERVAL",
+                "scheduleInterval", 30
+        ));
 
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -267,9 +275,9 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void createSyncConfig_scheduleType_daily_shouldReturn400_whenRuntimeNull() throws Exception {
-        String requestBody = requestBodyWithSchedule("""
-                "scheduleType":"DAILY"
-                """);
+        String requestBody = requestBodyWithSchedule(Map.of(
+                "scheduleType", "DAILY"
+        ));
 
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -282,11 +290,11 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void createSyncConfig_scheduleType_daily_shouldReturn400_whenScheduleIntervalNotNull() throws Exception {
-        String requestBody = requestBodyWithSchedule("""
-                "scheduleType":"DAILY",
-                "runTime":"10:00",
-                "scheduleInterval":30
-                """);
+        String requestBody = requestBodyWithSchedule(Map.of(
+                "scheduleType", "DAILY",
+                "runTime", "10:00",
+                "scheduleInterval", 30
+        ));
 
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -299,10 +307,10 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void createSyncConfig_scheduleType_daily_shouldReturn201() throws Exception {
-        String requestBody = requestBodyWithSchedule("""
-                "scheduleType":"DAILY",
-                "runTime":"10:00"
-                """);
+        String requestBody = requestBodyWithSchedule(Map.of(
+                "scheduleType", "DAILY",
+                "runTime", "10:00"
+        ));
 
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -313,10 +321,11 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void createSyncConfig_whenDuplicateSyncConfig_ShouldReturn400() throws Exception {
-        String requestBody = requestBodyWithSchedule("""
-                "scheduleType":"DAILY",
-                "runTime":"10:00"
-                """);
+        String requestBody = requestBodyWithSchedule(Map.of(
+                "scheduleType", "DAILY",
+                "runTime", "10:00"
+        ));
+
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
@@ -332,11 +341,10 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void createSyncConfig_sameSourceTargetAndSameScheduleType_shouldReturn400() throws Exception {
-
-        String requestBody = requestBodyWithSchedule("""
-                "scheduleType":"DAILY",
-                "runTime":"10:00"
-                """);
+        String requestBody = requestBodyWithSchedule(Map.of(
+                "scheduleType", "DAILY",
+                "runTime", "10:00"
+        ));
 
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -353,16 +361,15 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void createSyncConfig_sameSourceTargetButDifferentScheduleType_shouldReturn201() throws Exception {
+        String dailyRequest = requestBodyWithSchedule(Map.of(
+                "scheduleType", "DAILY",
+                "runTime", "10:00"
+        ));
 
-        String dailyRequest = requestBodyWithSchedule("""
-                "scheduleType":"DAILY",
-                "runTime":"10:00"
-                """);
-
-        String intervalRequest = requestBodyWithSchedule("""
-                "scheduleType":"INTERVAL",
-                "scheduleInterval":20
-                """);
+        String intervalRequest = requestBodyWithSchedule(Map.of(
+                "scheduleType", "INTERVAL",
+                "scheduleInterval", 20
+        ));
 
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -377,10 +384,10 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void createSyncConfig_whenScheduleTypeInterval_shouldPersistInterval() throws Exception {
-        String requestBody = requestBodyWithSchedule("""
-                "scheduleType":"INTERVAL",
-                "scheduleInterval":20
-                """);
+        String requestBody = requestBodyWithSchedule(Map.of(
+                "scheduleType", "INTERVAL",
+                "scheduleInterval", 20
+        ));
 
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -395,10 +402,10 @@ class PersonalCloudSyncApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void createSyncConfig_whenScheduleTypeDaily_shouldPersistDaily() throws Exception {
-        String requestBody = requestBodyWithSchedule("""
-                "scheduleType":"DAILY",
-                "runTime":"10:00"
-                """);
+        String requestBody = requestBodyWithSchedule(Map.of(
+                "scheduleType", "DAILY",
+                "runTime", "10:00"
+        ));
 
         mockMvc.perform(post("/sync-config")
                         .contentType(MediaType.APPLICATION_JSON)

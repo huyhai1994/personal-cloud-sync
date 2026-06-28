@@ -11,9 +11,11 @@ import org.mini_lab.personal_cloud_sync.repositories.SyncAttemptRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
 import org.mini_lab.personal_cloud_sync.support.AbstractIntegrationTest;
+import org.mini_lab.personal_cloud_sync.support.FakeRCloneConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -27,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Import(FakeRCloneConfig.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ManualSyncJobServiceIntegrationTest extends AbstractIntegrationTest {
 
