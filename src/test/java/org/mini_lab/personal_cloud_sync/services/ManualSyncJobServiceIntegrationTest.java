@@ -31,7 +31,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Import(FakeRCloneConfig.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ManualSyncJobServiceIntegrationTest extends AbstractIntegrationTest {
 
@@ -88,7 +87,7 @@ class ManualSyncJobServiceIntegrationTest extends AbstractIntegrationTest {
         assertNotNull(syncJobResponse);
         assertNotNull(syncJobResponse.syncJobId());
         assertEquals(JobStatus.PENDING, syncJobResponse.jobStatus());
-        await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
+        await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
             assertTrue(Files.exists(targetFile));
             assertEquals(Files.readString(sourceFile), Files.readString(targetFile));
         });
