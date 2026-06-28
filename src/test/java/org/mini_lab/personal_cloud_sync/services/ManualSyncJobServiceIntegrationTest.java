@@ -1,6 +1,7 @@
 package org.mini_lab.personal_cloud_sync.services;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
@@ -13,6 +14,7 @@ import org.mini_lab.personal_cloud_sync.repositories.SyncAttemptRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncConfigRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
 import org.mini_lab.personal_cloud_sync.support.AbstractIntegrationTest;
+import org.mini_lab.personal_cloud_sync.support.CommandUtils;
 import org.mini_lab.personal_cloud_sync.support.FakeRCloneConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -28,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mini_lab.personal_cloud_sync.support.CommandUtils.commandExists;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -80,6 +83,7 @@ class ManualSyncJobServiceIntegrationTest extends AbstractIntegrationTest {
     @Test
     @EnabledOnOs(OS.LINUX)
     void createAndDispatch() throws IOException {
+        Assumptions.assumeTrue(commandExists("rclone"), "rclone is not installed");
         Path sourceFile = sourcePath.resolve("test.txt");
         Path targetFile = targetPath.resolve("test.txt");
         Files.writeString(sourceFile, "Hello World!");
@@ -92,6 +96,5 @@ class ManualSyncJobServiceIntegrationTest extends AbstractIntegrationTest {
             assertEquals(Files.readString(sourceFile), Files.readString(targetFile));
         });
     }
-
 
 }

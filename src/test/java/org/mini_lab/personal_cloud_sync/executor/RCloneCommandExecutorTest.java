@@ -18,6 +18,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mini_lab.personal_cloud_sync.support.CommandUtils.commandExists;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -73,12 +74,4 @@ class RCloneCommandExecutorTest {
         assertEquals("RClone process timed out", result.getErrorMessage());
     }
 
-    private boolean commandExists(String command) {
-        try {
-            Process process = new ProcessBuilder(command, "--version").start();
-            return process.waitFor() == 0;
-        } catch (Exception e) {
-            return false;
-        }
-    }
 }
