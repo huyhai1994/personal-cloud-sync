@@ -3,6 +3,8 @@ package org.mini_lab.personal_cloud_sync.services;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.dto.SyncJobResponse;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
@@ -77,6 +79,7 @@ class ManualSyncJobServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @EnabledOnOs(OS.LINUX)
     void createAndDispatch() throws IOException {
         Path sourceFile = sourcePath.resolve("test.txt");
         Path targetFile = targetPath.resolve("test.txt");
