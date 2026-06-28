@@ -1,5 +1,6 @@
 package org.mini_lab.personal_cloud_sync.executor;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -39,7 +40,7 @@ class RCloneCommandExecutorTest {
 
     @Test
     void executeCommand_syncLocalFile_shouldSuccess() throws IOException, InterruptedException {
-
+        Assumptions.assumeTrue(commandExists("rclone"), "rclone is not installed");
         when(rCloneCommandBuilder
                 .command(sourcePath.toString(), targetPath.toString()))
                 .thenReturn(List.of("rclone", "sync", sourcePath.toString(), targetPath.toString(), "--log-level", "INFO"));
@@ -61,6 +62,7 @@ class RCloneCommandExecutorTest {
     @Test
     void executeCommand_whenCommandTimeout_shouldKillProcess()
             throws IOException, InterruptedException {
+        Assumptions.assumeTrue(commandExists("rclone"), "rclone is not installed");
 
         when(rCloneProperties.getTimeOutSecond()).thenReturn(5);
         RCloneResult result = rCloneCommandExecutor.executeCommand(
@@ -69,5 +71,14 @@ class RCloneCommandExecutorTest {
 
         assertEquals(-1, result.getExitCode());
         assertEquals("RClone process timed out", result.getErrorMessage());
+    }
+
+    private boolean commandExists(String command) {
+        try {
+            Process process = new ProcessBuilder(command, "--version").start();
+            return process.waitFor() == 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

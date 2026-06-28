@@ -22,7 +22,7 @@ class PathValidationUtilsTest {
 
     @Test
     void if_path_not_exist_return_false() {
-        String NON_EXIST_PATH = "abc<>xyz";
+        String NON_EXIST_PATH = "abc";
         assertFalse(PathValidationUtils.pathIsExits(NON_EXIST_PATH));
     }
 
