@@ -1,5 +1,6 @@
 package org.mini_lab.personal_cloud_sync.services;
 
+import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mini_lab.personal_cloud_sync.component.IRCloneExecutor;
@@ -26,6 +27,10 @@ public class SyncJobProcessor {
     private final SyncConfigValidator syncConfigValidator;
     private final ScheduledThreadPoolExecutor heartbeatExecutor;
 
+    @Timed(
+            value = "sync.job.processor.process",
+            description = "Time taken to process an Job"
+    )
     public void process(Integer syncJobId) {
         log.info("SYNC_JOB_PROCESS_STARTED");
         SyncJobContext syncJobContext = syncJobProcessorService.markRunning(syncJobId);
