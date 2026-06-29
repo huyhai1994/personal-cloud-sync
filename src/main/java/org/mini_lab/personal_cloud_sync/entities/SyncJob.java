@@ -14,7 +14,11 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-@Table(name = "sync_job")
+@Table(name = "sync_job",
+        indexes = @Index(
+                name = "idx_sync_config_status",
+                columnList = "sync_config_id, final_status"
+        ))
 public class SyncJob {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
