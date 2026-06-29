@@ -2,6 +2,7 @@ package org.mini_lab.personal_cloud_sync.services;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
@@ -14,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,12 +35,18 @@ class SyncJobCreationServiceTest {
     @Mock
     SyncConfigRepository syncConfigRepository;
 
+    @TempDir
+    Path sourcePath;
+
+    @TempDir
+    Path targetPath;
+
     @Test
     void createPendingJob_whenSyncConfigValidAndSyncJobNotExistedYet_shouldCreateJob() {
         short syncConfigId = (short) 100;
         SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
+        syncConfig.setSourcePath(sourcePath.toString());
+        syncConfig.setTargetPath(targetPath.toString());
         syncConfig.setId(syncConfigId);
 
         when(syncConfigRepository.getSyncConfigByIdAndEnabled(syncConfigId, Boolean.TRUE)).thenReturn(Optional.of(syncConfig));
@@ -59,8 +67,8 @@ class SyncJobCreationServiceTest {
     void createPendingJob_whenSyncConfigNotFound_shouldThrowNotFoundException() {
         short syncConfigId = (short) 100;
         SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
+        syncConfig.setSourcePath(sourcePath.toString());
+        syncConfig.setTargetPath(targetPath.toString());
         syncConfig.setId(syncConfigId);
 
         when(syncConfigRepository.getSyncConfigByIdAndEnabled(syncConfigId, Boolean.TRUE)).thenReturn(Optional.empty());
@@ -75,8 +83,8 @@ class SyncJobCreationServiceTest {
     void createPendingJob_whenSyncConfigDisabled_shouldThrowNotFoundException() {
         short syncConfigId = (short) 100;
         SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
+        syncConfig.setSourcePath(sourcePath.toString());
+        syncConfig.setTargetPath(targetPath.toString());
         syncConfig.setId(syncConfigId);
         syncConfig.setEnabled(Boolean.FALSE);
 
@@ -92,8 +100,8 @@ class SyncJobCreationServiceTest {
     void createPendingJob_whenJobAlreadyExisted_shouldThrowSyncJobAlreadyRunningException() {
         short syncConfigId = (short) 100;
         SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
+        syncConfig.setSourcePath(sourcePath.toString());
+        syncConfig.setTargetPath(targetPath.toString());
         syncConfig.setId(syncConfigId);
 
         when(syncConfigRepository.getSyncConfigByIdAndEnabled(syncConfigId, Boolean.TRUE)).thenReturn(Optional.of(syncConfig));

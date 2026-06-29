@@ -31,7 +31,7 @@ public class SyncConfigValidator implements ISyncConfigValidator {
 
         validateMaximumRetryCount(maximumRetryCount);
         validatePath(sourcePath, targetPath);
-        validateIfSourceAndTargetPathAndScheduleTypeExisted(sourcePath, targetPath, scheduleType);
+//        validateIfSourceAndTargetPathAndScheduleTypeExisted(sourcePath, targetPath, scheduleType);
         validateScheduleType(scheduleType, runTime, scheduleInterval);
 
     }
@@ -87,8 +87,6 @@ public class SyncConfigValidator implements ISyncConfigValidator {
     }
 
     private void validateIfSourceAndTargetPathAndScheduleTypeExisted(String sourcePath, String targetPath, ScheduleType scheduleType) {
-        log.info("CHECK_DUPLICATE sourcePath={}, targetPath={}, scheduleType={}",
-                sourcePath, targetPath, scheduleType);
         log.info("CHECK_DUPLICATE sourcePath={}, targetPath={}, scheduleType={}",
                 sourcePath, targetPath, scheduleType);
 

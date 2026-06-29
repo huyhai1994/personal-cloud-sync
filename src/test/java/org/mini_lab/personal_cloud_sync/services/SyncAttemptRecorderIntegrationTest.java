@@ -3,6 +3,7 @@ package org.mini_lab.personal_cloud_sync.services;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.entities.SyncAttempt;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
@@ -20,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,6 +46,12 @@ class SyncAttemptRecorderIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private TransactionTemplate transactionTemplate;
 
+    @TempDir
+    Path sourcePath;
+
+    @TempDir
+    Path targetPath;
+
     private SyncConfig persistedSyncConfig;
     private SyncJob persistedSyncJob;
 
@@ -51,8 +59,8 @@ class SyncAttemptRecorderIntegrationTest extends AbstractIntegrationTest {
     void setUp() {
         persistedSyncConfig = transactionTemplate.execute((status -> {
             SyncConfig syncConfig = new SyncConfig();
-            syncConfig.setSourcePath("/source/test");
-            syncConfig.setTargetPath("/target/test");
+            syncConfig.setSourcePath(sourcePath.toString());
+            syncConfig.setTargetPath(targetPath.toString());
             return syncConfigRepository.save(syncConfig);
         }));
         persistedSyncJob = transactionTemplate.execute(status -> {

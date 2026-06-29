@@ -51,8 +51,8 @@ class SyncConfigRepositoryTest extends AbstractIntegrationTest {
     void persist_sync_config_should_success() {
         SyncConfig syncConfig = new SyncConfig();
 
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
+        syncConfig.setSourcePath(sourcePath.toString());
+        syncConfig.setTargetPath(targetPath.toString());
         SyncConfig syncConfig1 = syncConfigRepository.saveAndFlush(syncConfig);
         assertNotNull(syncConfig1.getId());
     }
@@ -66,8 +66,8 @@ class SyncConfigRepositoryTest extends AbstractIntegrationTest {
     @Test
     void persist_sync_config_created_at_auto_generated() {
         SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
+        syncConfig.setSourcePath(sourcePath.toString());
+        syncConfig.setTargetPath(targetPath.toString());
         SyncConfig syncConfig1 = syncConfigRepository.saveAndFlush(syncConfig);
         assertNotNull(syncConfig1.getCreatedAt());
     }
@@ -93,8 +93,8 @@ class SyncConfigRepositoryTest extends AbstractIntegrationTest {
     void get_sync_config_by_enabled_should_return_only_enabled_configs() {
 
         SyncConfig enabledConfig = new SyncConfig();
-        enabledConfig.setSourcePath("/source/test");
-        enabledConfig.setTargetPath("/target/test");
+        enabledConfig.setSourcePath(sourcePath.toString());
+        enabledConfig.setTargetPath(targetPath.toString());
 
         SyncConfig disabledConfig = new SyncConfig();
         disabledConfig.setEnabled(false);

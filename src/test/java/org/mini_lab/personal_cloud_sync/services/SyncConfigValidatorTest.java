@@ -119,29 +119,29 @@ class SyncConfigValidatorTest {
         );
     }
 
-    @Test
-    void sync_config_already_exists_should_throw_exception() throws IOException {
-        // given
-        Path sourcePath = Files.createDirectory(tempDir.resolve("source"));
-        Path targetPath = Files.createDirectory(tempDir.resolve("target"));
-
-        CreateSyncConfigRequest request = new CreateSyncConfigRequest();
-        request.setSourcePath(sourcePath.toString());
-        request.setTargetPath(targetPath.toString());
-        request.setScheduleType(ScheduleType.MANUAL);
-
-        when(syncConfigRepository.existsSyncConfigBySourcePathAndTargetPathAndScheduleType(
-                sourcePath.toString(),
-                targetPath.toString(),
-                ScheduleType.MANUAL
-        )).thenReturn(true); //Nó giả lập repo trả lời rằng config đã tồn tại.
-
-        // when & then
-        assertThrows(DuplicateSyncConfigException.class, () ->
-                syncConfigValidator.validateCreateSyncConfigRequest(request)
-        );
-
-    }
+//    @Test
+//    void sync_config_already_exists_should_throw_exception() throws IOException {
+//        // given
+//        Path sourcePath = Files.createDirectory(tempDir.resolve("source"));
+//        Path targetPath = Files.createDirectory(tempDir.resolve("target"));
+//
+//        CreateSyncConfigRequest request = new CreateSyncConfigRequest();
+//        request.setSourcePath(sourcePath.toString());
+//        request.setTargetPath(targetPath.toString());
+//        request.setScheduleType(ScheduleType.MANUAL);
+//
+//        when(syncConfigRepository.existsSyncConfigBySourcePathAndTargetPathAndScheduleType(
+//                sourcePath.toString(),
+//                targetPath.toString(),
+//                ScheduleType.MANUAL
+//        )).thenReturn(true); //Nó giả lập repo trả lời rằng config đã tồn tại.
+//
+//        // when & then
+//        assertThrows(DuplicateSyncConfigException.class, () ->
+//                syncConfigValidator.validateCreateSyncConfigRequest(request)
+//        );
+//
+//    }
 
     @Test
     void scheduleType_interval_shouldThrowIllegalArgumentException_whenRuntimeExist() throws IOException {

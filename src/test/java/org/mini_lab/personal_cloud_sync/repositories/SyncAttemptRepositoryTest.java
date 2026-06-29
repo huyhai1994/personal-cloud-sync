@@ -2,6 +2,7 @@ package org.mini_lab.personal_cloud_sync.repositories;
 
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.entities.SyncAttempt;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -39,11 +41,17 @@ class SyncAttemptRepositoryTest extends AbstractIntegrationTest {
             ZoneOffset.UTC
     );
 
+    @TempDir
+    Path sourcePath;
+
+    @TempDir
+    Path targetPath;
+
     @Test
     void saveInitialSyncAttempt_shouldSuccess() {
         SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath("/source/test");
-        syncConfig.setTargetPath("/target/test");
+        syncConfig.setSourcePath(sourcePath.toString());
+        syncConfig.setTargetPath(targetPath.toString());
         SyncConfig persistedSyncConfig =
                 syncConfigRepository.saveAndFlush(syncConfig);
 

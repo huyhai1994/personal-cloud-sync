@@ -2,6 +2,7 @@ package org.mini_lab.personal_cloud_sync.repositories;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
@@ -9,13 +10,10 @@ import org.mini_lab.personal_cloud_sync.support.AbstractIntegrationTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.*;
 
@@ -36,6 +34,12 @@ class SyncJobRepositoryConcurrencyTest extends AbstractIntegrationTest {
     @Autowired
     private TransactionTemplate transactionTemplate;
 
+    @TempDir
+    Path sourcePath;
+
+    @TempDir
+    Path targetPath;
+
     @AfterEach
     void tearDown() {
         syncJobRepository.deleteAllInBatch();
@@ -52,8 +56,8 @@ class SyncJobRepositoryConcurrencyTest extends AbstractIntegrationTest {
         try {
             SyncConfig persistedSyncConfig = transactionTemplate.execute(status -> {
                 SyncConfig syncConfig = new SyncConfig();
-                syncConfig.setSourcePath("/source/test");
-                syncConfig.setTargetPath("/target/test");
+                syncConfig.setSourcePath(sourcePath.toString());
+                syncConfig.setTargetPath(targetPath.toString());
                 return syncConfigRepository.save(syncConfig);
             });
 
@@ -98,8 +102,8 @@ class SyncJobRepositoryConcurrencyTest extends AbstractIntegrationTest {
     void updateWrongTransitionStatus_shouldReturnZero_whenMarkRunning() {
         SyncConfig persistedSyncConfig = transactionTemplate.execute(status -> {
             SyncConfig syncConfig = new SyncConfig();
-            syncConfig.setSourcePath("/source/test");
-            syncConfig.setTargetPath("/target/test");
+            syncConfig.setSourcePath(sourcePath.toString());
+            syncConfig.setTargetPath(targetPath.toString());
             return syncConfigRepository.save(syncConfig);
         });
 

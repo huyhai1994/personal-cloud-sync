@@ -3,6 +3,7 @@ package org.mini_lab.personal_cloud_sync.services;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
@@ -17,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.*;
 
@@ -42,17 +44,23 @@ class SyncJobCreationServiceIntegrationTest extends AbstractIntegrationTest {
 
     private SyncConfig persistedSyncConfig;
 
+    @TempDir
+    Path sourcePath;
+
+    @TempDir
+    Path targetPath;
+
     @BeforeEach
     void setUp() {
         persistedSyncConfig = transactionTemplate.execute((status -> {
             SyncConfig syncConfig = new SyncConfig();
-            syncConfig.setSourcePath("/source/test");
-            syncConfig.setTargetPath("/target/test");
+            syncConfig.setSourcePath(sourcePath.toString());
+            syncConfig.setTargetPath(targetPath.toString());
             return syncConfigRepository.save(syncConfig);
         }));
         assertNotNull(persistedSyncConfig);
-        assertEquals("/source/test", persistedSyncConfig.getSourcePath());
-        assertEquals("/target/test", persistedSyncConfig.getTargetPath());
+        assertEquals(sourcePath.toString(), persistedSyncConfig.getSourcePath());
+        assertEquals(targetPath.toString(), persistedSyncConfig.getTargetPath());
     }
 
     @AfterEach
