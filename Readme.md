@@ -597,8 +597,7 @@ primary(id)
 unique(source_path, target_path, schedule_type)
 ```
 
-No additional secondary indexes are required  for this feature because the workload is  insert-only.
-
+Không cần đánh index thứ 2 vì tính năng này chỉ có insert giá trị mới .
 
 ### 5.8 Error Handling
 
