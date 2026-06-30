@@ -383,7 +383,72 @@ SyncConfig ..> ScheduleType : has
 @enduml
 ```
 
+- Flow tính giá trị của `nextScheduledAt`
+```plantuml
+@startuml  
+'https://plantuml.com/activity-diagram-beta  
+  
+start  
+:receive NextScheduledAtRequest DTO;  
+  
+:parse scheduleType;  
+:parse scheduleInterval;  
+:parse runTime;  
+:get current time as now;  
+if (scheduleType == MANUAL?) is (yes) then  
+    if (runTime != null OR scheduleInterval != null?) is (yes)  
+        :throw IllegalArgumentException;  
+        stop  
+    endif  
+  
+    :return Optional.empty();  
+    stop  
+  
+else if (scheduleType == DAILY?) is (yes) then  
+  
+    if (runTime == null?) is (yes) then  
+        :throw IllegalArgumentException;  
+        stop  
+    endif  
+    if (scheduleInterval != null?) is (yes) then  
+        :throw IllegalArgumentException;  
+        stop  
+    endif  
+  
+    :candidate = today at runTime;  
+  
+    if (candidate <= now?) is (yes) then  
+        :candidate = candidate + 1 day;  
+    endif  
+  
+    :return Optional.of(candidate);  
+    stop  
+  
+else if (scheduleType == INTERVAL?) is (yes) then  
+  
+    if (runTime != null?) is (yes) then  
+        :throw IllegalArgumentException;  
+        stop  
+    endif  
+    if (scheduleInterval == null?) is (yes) then  
+        :throw IllegalArgumentException;  
+        stop  
+    endif  
+  
+    :nextScheduledAt = now + scheduleInterval;  
+    :return Optional.of(nextScheduledAt);  
+    stop  
+  
+else  
+    :throw IllegalArgumentException;  
+    stop  
+endif  
+  
+@enduml
 
+
+
+```
 
 ### 5.4 Sequence Flow
 
@@ -717,8 +782,8 @@ OneDriveRCloneExecutor ..|> IRCloneExecutor
 ```
 ### 6.4 Sequence Flow
 
-```puml
-@startuml  
+```plantuml
+@startuml 
   
 |User|  
 start  
@@ -798,6 +863,8 @@ stop
 ### 6.5 Validation Rules
 - Việc kiểm tra cấu hình path đã được tiến hành ở bước tạo Sync Config nên tạm bỏ qua ở flow này.
 ### 6.6 Transaction Boundary
+
+#### 6.6.1 Create Pending Job
 ```java
 @Transactional  
 public SyncJob createPendingJob(Short syncConfigId) {  
@@ -822,6 +889,68 @@ Transaction boundary bao trùm toàn bộ flow tạo job:
 - Persist `SyncJob` xuống bảng `sync_job`.
 
 Điểm quan trọng: thao tác **check active job** và **insert new pending job** phải nằm trong cùng một transaction. Nếu tách ra, hai request đồng thời có thể cùng thấy “chưa có active job” rồi cùng tạo job mới.
+
+#### 6.6.2 process scheduled jobs
+
+Không đặt `@Transactional` trực tiếp trên hàm `process()`.
+
+Lý do: `process()` có gọi external process thông qua `rcloneExecutor.sync()`. Quá trình này có thể chạy lâu. Nếu đặt transaction boundary bao quanh toàn bộ `process()`, database connection sẽ bị giữ trong suốt thời gian external process chạy.
+
+Vì vậy transaction boundary được thiết kế ngắn và đặt trong các method nhỏ chuyên xử lý state transition:
+
+- `markRunning()`
+- `updateHeartbeat()`
+- `markSuccess()`
+- `markFailed()`
+
+Mỗi method tự mở transaction riêng, cập nhật trạng thái job, sau đó commit ngay.
+
+``` java
+
+public void process(Integer syncJobId) {
+        log.info("SYNC_JOB_PROCESS_STARTED");
+        SyncJobContext syncJobContext = syncJobProcessorService.markRunning(syncJobId);
+        ScheduledFuture<?> heartbeatTask = heartbeatExecutor.scheduleAtFixedRate(
+                () -> {
+                    try {
+                        syncJobProcessorService.updateHeartbeat(syncJobId);
+                    } catch (Exception e) {
+                        log.warn("UPDATE_HEARTBEAT_FAILED syncJobId={}", syncJobId, e);
+                    }
+                },
+                5,
+                5,
+                TimeUnit.SECONDS
+        );
+        try {
+            validate(syncJobContext);
+            RCloneResult rCloneResult = rCloneExecutor.sync(syncJobContext);
+            log.info("RCLONE_FINISHED exitCode={} errorMessage={}",
+                    rCloneResult.getExitCode(), rCloneResult.getErrorMessage());
+            if (rCloneResult.isSuccess()) {
+                syncJobProcessorService.markSuccess(syncJobContext);
+            } else {
+                SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.SYNC_PROCESS_ERROR, "Rclone process finished with non-zero exit code");
+                syncJobProcessorService.markFailed(syncJobContext, syncErrorLog);
+            }
+        } catch (IOException e) {
+            SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.IO_ERROR, "IOException occurred while starting process or reading process output");
+            syncJobProcessorService.markFailed(syncJobContext, syncErrorLog);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.INTERRUPTED, "Worker thread was interrupted while waiting for sync process");
+            syncJobProcessorService.markFailed(syncJobContext, syncErrorLog);
+        } catch (InvalidPathException | LocalPathIsNotDirectory e) {
+            SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.VALIDATION_ERROR, "Source path / target path invalid before running sync job");
+            syncJobProcessorService.markFailed(syncJobContext, syncErrorLog);
+        } catch (Exception e) {
+            SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.UNKNOWN_ERROR, e.getMessage());
+k            syncJobProcessorService.markFailed(syncJobContext, syncErrorLog);
+        } finally {
+            heartbeatTask.cancel(true);
+        }
+    }
+```
 ### 6.7 Concurrency Control / Locking
 Khi tạo `SyncJob`, hệ thống dùng **pessimistic lock trên row `SyncConfig`** tương ứng.
 
@@ -886,3 +1015,22 @@ CREATE INDEX idx_sync_config_status
 | -------------------------------------------------------- | ------------: | ----------------------------- |
 | Sync Config not found!                                   | 404 Not Found | SyncConfigNotFoundException   |
 | Sync config already has pending/running or submitted job |  409 Conflict | SyncJobAlreadyActiveException |
+## 7 Feature: Create and Run Scheduled Sync Jobs
+### 7.1 Responsibility
+-  Tạo `sync job` định kỳ theo schedule đọc được từ `sync_config`.
+### 7.2 API / Entry Point
+- Không hỗ trợ API Endpoint
+### 7.3 Class Diagram
+```plantuml
+
+
+
+```
+### 7.4 Sequence Flow
+### 7.5 Validation Rules
+### 7.6 Transaction Boundary
+### 7.7 Concurrency Control / Locking
+### 7.8 DB Constraints / Index
+### 7.9 Query
+### 7.10 Error Handling
+### 7.11 Test Cases
