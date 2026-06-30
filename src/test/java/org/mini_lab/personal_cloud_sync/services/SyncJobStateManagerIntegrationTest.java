@@ -26,10 +26,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("test")
 @Import(TestClockConfiguration.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class SyncJobProcessorServiceIntegrationTest extends AbstractIntegrationTest {
+class SyncJobStateManagerIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
-    SyncJobProcessorService syncJobProcessorService;
+    SyncJobStateManager syncJobStateManager;
 
     @Autowired
     private SyncJobRepository syncJobRepository;
@@ -58,7 +58,7 @@ class SyncJobProcessorServiceIntegrationTest extends AbstractIntegrationTest {
         SyncConfig syncConfig = saveSyncConfig("heart-beat-not-recorded");
         SyncJob syncJob = saveSyncJob(syncConfig, JobStatus.PENDING);
         Integer persistedSyncJobId = syncJob.getId();
-        assertDoesNotThrow(() -> syncJobProcessorService.updateHeartbeat(persistedSyncJobId));
+        assertDoesNotThrow(() -> syncJobStateManager.updateHeartbeat(persistedSyncJobId));
         SyncJob updatedHeartBeatSyncConfig = syncJobRepository.getSyncJobById(persistedSyncJobId).orElseThrow();
         assertNull(updatedHeartBeatSyncConfig.getHeartBeatAt());
     }
@@ -68,7 +68,7 @@ class SyncJobProcessorServiceIntegrationTest extends AbstractIntegrationTest {
         SyncConfig syncConfig = saveSyncConfig("heart-beat-recorded");
         SyncJob syncJob = saveSyncJob(syncConfig, JobStatus.RUNNING);
         Integer persistedSyncJobId = syncJob.getId();
-        assertDoesNotThrow(() -> syncJobProcessorService.updateHeartbeat(persistedSyncJobId));
+        assertDoesNotThrow(() -> syncJobStateManager.updateHeartbeat(persistedSyncJobId));
         SyncJob updatedHeartBeatSyncConfig = syncJobRepository.getSyncJobById(persistedSyncJobId).orElseThrow();
         assertNotNull(updatedHeartBeatSyncConfig.getHeartBeatAt());
 

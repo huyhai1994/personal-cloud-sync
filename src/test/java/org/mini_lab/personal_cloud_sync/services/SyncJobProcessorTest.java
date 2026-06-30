@@ -31,7 +31,7 @@ class SyncJobProcessorTest {
     SyncJobProcessor syncJobProcessor;
 
     @Mock
-    SyncJobProcessorService syncJobProcessorService;
+    SyncJobStateManager syncJobStateManager;
 
     @Mock
     ScheduledThreadPoolExecutor heartbeatExecutor;
@@ -60,7 +60,7 @@ class SyncJobProcessorTest {
                 .sourcePath(sourcePath.toString())
                 .targetPath(targetPath.toString())
                 .build();
-        when(syncJobProcessorService.markRunning(syncJobId)).thenThrow(new InvalidJobStateTransitionException());
+        when(syncJobStateManager.markRunning(syncJobId)).thenThrow(new InvalidJobStateTransitionException());
         // Act + assert
         assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessor.process(syncJobId));
         // Verify
@@ -77,7 +77,7 @@ class SyncJobProcessorTest {
         RCloneResult result = new RCloneResult();
         result.setExitCode(0);
 
-        when(syncJobProcessorService.markRunning(syncJobId)).thenReturn(syncJobContext);
+        when(syncJobStateManager.markRunning(syncJobId)).thenReturn(syncJobContext);
         doReturn(heartbeatTask)
                 .when(heartbeatExecutor)
                 .scheduleAtFixedRate(
@@ -91,7 +91,7 @@ class SyncJobProcessorTest {
         syncJobProcessor.process(syncJobId);
 
         // Assert
-        verify(syncJobProcessorService).markRunning(syncJobId);
+        verify(syncJobStateManager).markRunning(syncJobId);
         verify(heartbeatExecutor).scheduleAtFixedRate(
                 any(Runnable.class),
                 eq(5L),
@@ -99,7 +99,7 @@ class SyncJobProcessorTest {
                 eq(TimeUnit.SECONDS)
         );
         verify(rCloneExecutor).sync(syncJobContext);
-        verify(syncJobProcessorService).markSuccess(syncJobContext);
+        verify(syncJobStateManager).markSuccess(syncJobContext);
         verify(heartbeatTask).cancel(true);
     }
 
@@ -125,7 +125,7 @@ class SyncJobProcessorTest {
         RCloneResult result = new RCloneResult();
         result.setExitCode(111);
 
-        when(syncJobProcessorService.markRunning(syncJobId))
+        when(syncJobStateManager.markRunning(syncJobId))
                 .thenReturn(syncJobContext);
 
         doReturn(heartbeatTask)
@@ -144,7 +144,7 @@ class SyncJobProcessorTest {
         syncJobProcessor.process(syncJobId);
 
         // Assert
-        verify(syncJobProcessorService).markRunning(syncJobId);
+        verify(syncJobStateManager).markRunning(syncJobId);
         verify(heartbeatExecutor).scheduleAtFixedRate(
                 any(Runnable.class),
                 eq(5L),
@@ -152,7 +152,7 @@ class SyncJobProcessorTest {
                 eq(TimeUnit.SECONDS)
         );
         verify(rCloneExecutor).sync(syncJobContext);
-        verify(syncJobProcessorService).markFailed(syncJobContext, syncErrorLog);
+        verify(syncJobStateManager).markFailed(syncJobContext, syncErrorLog);
         verify(heartbeatTask).cancel(true);
     }
 
@@ -162,7 +162,7 @@ class SyncJobProcessorTest {
         Integer syncJobAttemptId = 100;
         SyncJobContext syncJobContext = new SyncJobContext(syncJobId, syncJobAttemptId, sourcePath.toString(), targetPath.toString());
 
-        when(syncJobProcessorService.markRunning(syncJobId)).thenReturn(syncJobContext);
+        when(syncJobStateManager.markRunning(syncJobId)).thenReturn(syncJobContext);
         doReturn(heartbeatTask)
                 .when(heartbeatExecutor)
                 .scheduleAtFixedRate(
@@ -177,7 +177,7 @@ class SyncJobProcessorTest {
         syncJobProcessor.process(syncJobId);
 
         // Assert
-        verify(syncJobProcessorService).markRunning(syncJobId);
+        verify(syncJobStateManager).markRunning(syncJobId);
         verify(heartbeatExecutor).scheduleAtFixedRate(
                 any(Runnable.class),
                 eq(5L),
@@ -188,13 +188,13 @@ class SyncJobProcessorTest {
                 .validateTargetPath(anyString());
         verify(rCloneExecutor, never())
                 .sync(any());
-        verify(syncJobProcessorService).markFailed(
+        verify(syncJobStateManager).markFailed(
                 eq(syncJobContext),
                 argThat(error ->
                         error.syncErrorCode() == SyncErrorCode.VALIDATION_ERROR
                 )
         );
-        verify(syncJobProcessorService, never())
+        verify(syncJobStateManager, never())
                 .markSuccess(any());
         verify(heartbeatTask).cancel(true);
     }

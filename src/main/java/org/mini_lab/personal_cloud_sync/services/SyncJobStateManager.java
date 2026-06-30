@@ -19,7 +19,7 @@ import java.time.OffsetDateTime;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SyncJobProcessorService {
+public class SyncJobStateManager {
     private final SyncJobRepository syncJobRepository;
     private final SyncAttemptRecorder syncAttemptRecorder;
     private final Clock systemClock;

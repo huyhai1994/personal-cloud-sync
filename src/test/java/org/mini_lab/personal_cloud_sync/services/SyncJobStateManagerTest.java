@@ -29,7 +29,7 @@ import static org.mockito.Mockito.*;
 
 
 @ExtendWith(MockitoExtension.class)
-class SyncJobProcessorServiceTest {
+class SyncJobStateManagerTest {
     @Mock
     SyncJobRepository syncJobRepository;
 
@@ -37,7 +37,7 @@ class SyncJobProcessorServiceTest {
     SyncAttemptRecorder syncAttemptRecorder;
 
     @InjectMocks
-    SyncJobProcessorService syncJobProcessorService;
+    SyncJobStateManager syncJobStateManager;
 
     private final Clock fixedClock = Clock.fixed(
             Instant.parse("2026-06-24T10:00:00Z"),
@@ -52,14 +52,14 @@ class SyncJobProcessorServiceTest {
 
     @BeforeEach
     void setUp() {
-        syncJobProcessorService = new SyncJobProcessorService(syncJobRepository, syncAttemptRecorder, fixedClock);
+        syncJobStateManager = new SyncJobStateManager(syncJobRepository, syncAttemptRecorder, fixedClock);
     }
 
     @Test
     void whenUpdatedFail_fromPendingToSubmitFail_shouldThrowInvalidJobStateTransitionException() {
         Integer syncJobId = 100;
         when(syncJobRepository.markSubmitFailedIfPending(syncJobId, JobStatus.SUBMIT_FAILED, JobStatus.PENDING, OffsetDateTime.now(fixedClock))).thenReturn(0);
-        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markSubmitFailed(syncJobId));
+        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobStateManager.markSubmitFailed(syncJobId));
         verify(syncJobRepository).markSubmitFailedIfPending(
                 syncJobId,
                 JobStatus.SUBMIT_FAILED,
@@ -72,7 +72,7 @@ class SyncJobProcessorServiceTest {
     void whenUpdatedSuccess_fromPendingToSubmitFail_shouldNotThrow() {
         Integer syncJobId = 100;
         when(syncJobRepository.markSubmitFailedIfPending(syncJobId, JobStatus.SUBMIT_FAILED, JobStatus.PENDING, OffsetDateTime.now(fixedClock))).thenReturn(1);
-        assertDoesNotThrow(() -> syncJobProcessorService.markSubmitFailed(syncJobId));
+        assertDoesNotThrow(() -> syncJobStateManager.markSubmitFailed(syncJobId));
         verify(syncJobRepository).markSubmitFailedIfPending(
                 syncJobId,
                 JobStatus.SUBMIT_FAILED,
@@ -85,7 +85,7 @@ class SyncJobProcessorServiceTest {
     void whenUpdatedFail_fromPendingToRunningState_shouldThrowInvalidJobStateTransitionException() {
         Integer syncJobId = 100;
         when(syncJobRepository.markRunningIfSubmitted(syncJobId, JobStatus.RUNNING, JobStatus.SUBMITTED, OffsetDateTime.now(fixedClock))).thenReturn(0);
-        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markRunning(syncJobId));
+        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobStateManager.markRunning(syncJobId));
         verify(syncJobRepository).markRunningIfSubmitted(
                 syncJobId,
                 JobStatus.RUNNING,
@@ -103,7 +103,7 @@ class SyncJobProcessorServiceTest {
         SyncJobContext syncJobContext = getSyncJobContext(syncJobId, syncJobAttemptId);
         SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.SYNC_PROCESS_ERROR, "Rclone process finished with non-zero exit code");
         when(syncJobRepository.markFailedIfRunning(syncJobId, JobStatus.FAILED, JobStatus.RUNNING, OffsetDateTime.now(fixedClock))).thenReturn(0);
-        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markFailed(syncJobContext, syncErrorLog));
+        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobStateManager.markFailed(syncJobContext, syncErrorLog));
     }
 
     private @NotNull SyncJobContext getSyncJobContext(Integer syncJobId, Integer syncJobAttemptId) {
@@ -116,7 +116,7 @@ class SyncJobProcessorServiceTest {
         Integer syncJobAttemptId = 100;
         SyncJobContext syncJobContext = getSyncJobContext(syncJobId, syncJobAttemptId);
         when(syncJobRepository.markSuccessIfRunning(syncJobId, JobStatus.SUCCESS, JobStatus.RUNNING, OffsetDateTime.now(fixedClock))).thenReturn(0);
-        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobProcessorService.markSuccess(syncJobContext));
+        assertThrows(InvalidJobStateTransitionException.class, () -> syncJobStateManager.markSuccess(syncJobContext));
     }
 
     @Test
@@ -136,6 +136,6 @@ class SyncJobProcessorServiceTest {
         when(syncJobRepository.getSyncJobById(syncJobId)).thenReturn(Optional.of(syncJob));
         when(syncAttemptRecorder.startAttempt(syncJob)).thenReturn(syncJobAttemptId);
         SyncJobContext syncJobContext = getSyncJobContext(syncJobId, syncJobAttemptId);
-        assertEquals(syncJobContext, syncJobProcessorService.markRunning(syncJobId));
+        assertEquals(syncJobContext, syncJobStateManager.markRunning(syncJobId));
     }
 }

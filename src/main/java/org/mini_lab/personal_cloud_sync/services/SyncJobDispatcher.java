@@ -19,12 +19,12 @@ public class SyncJobDispatcher {
     private final TaskExecutor syncJobExecutor;
 
     private final SyncJobProcessor syncJobProcessor;
-    private final SyncJobProcessorService syncJobProcessorService;
+    private final SyncJobStateManager syncJobStateManager;
 
     public void dispatch(Integer syncJobId) {
         try {
             log.info("SYNC_JOB_DISPATCHED syncJobId={}", syncJobId);
-            syncJobProcessorService.markSubmitted(syncJobId);
+            syncJobStateManager.markSubmitted(syncJobId);
             syncJobExecutor
                     .execute(withMdcContext(
                             () -> {
@@ -33,7 +33,7 @@ public class SyncJobDispatcher {
                             })
                     );
         } catch (RejectedExecutionException e) {
-            syncJobProcessorService.markSubmitFailed(syncJobId);
+            syncJobStateManager.markSubmitFailed(syncJobId);
         }
     }
 

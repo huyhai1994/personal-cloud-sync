@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class SyncJobProcessor {
     private final IRCloneExecutor rCloneExecutor;
-    private final SyncJobProcessorService syncJobProcessorService;
+    private final SyncJobStateManager syncJobStateManager;
     private final SyncConfigValidator syncConfigValidator;
     private final ScheduledThreadPoolExecutor heartbeatExecutor;
 
@@ -33,11 +33,11 @@ public class SyncJobProcessor {
     )
     public void process(Integer syncJobId) {
         log.info("SYNC_JOB_PROCESS_STARTED");
-        SyncJobContext syncJobContext = syncJobProcessorService.markRunning(syncJobId);
+        SyncJobContext syncJobContext = syncJobStateManager.markRunning(syncJobId);
         ScheduledFuture<?> heartbeatTask = heartbeatExecutor.scheduleAtFixedRate(
                 () -> {
                     try {
-                        syncJobProcessorService.updateHeartbeat(syncJobId);
+                        syncJobStateManager.updateHeartbeat(syncJobId);
                     } catch (Exception e) {
                         log.warn("UPDATE_HEARTBEAT_FAILED syncJobId={}", syncJobId, e);
                     }
@@ -52,24 +52,24 @@ public class SyncJobProcessor {
             log.info("RCLONE_FINISHED exitCode={} errorMessage={}",
                     rCloneResult.getExitCode(), rCloneResult.getErrorMessage());
             if (rCloneResult.isSuccess()) {
-                syncJobProcessorService.markSuccess(syncJobContext);
+                syncJobStateManager.markSuccess(syncJobContext);
             } else {
                 SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.SYNC_PROCESS_ERROR, "Rclone process finished with non-zero exit code");
-                syncJobProcessorService.markFailed(syncJobContext, syncErrorLog);
+                syncJobStateManager.markFailed(syncJobContext, syncErrorLog);
             }
         } catch (IOException e) {
             SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.IO_ERROR, "IOException occurred while starting process or reading process output");
-            syncJobProcessorService.markFailed(syncJobContext, syncErrorLog);
+            syncJobStateManager.markFailed(syncJobContext, syncErrorLog);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.INTERRUPTED, "Worker thread was interrupted while waiting for sync process");
-            syncJobProcessorService.markFailed(syncJobContext, syncErrorLog);
+            syncJobStateManager.markFailed(syncJobContext, syncErrorLog);
         } catch (InvalidPathException | LocalPathIsNotDirectory e) {
             SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.VALIDATION_ERROR, "Source path / target path invalid before running sync job");
-            syncJobProcessorService.markFailed(syncJobContext, syncErrorLog);
+            syncJobStateManager.markFailed(syncJobContext, syncErrorLog);
         } catch (Exception e) {
             SyncErrorLog syncErrorLog = new SyncErrorLog(SyncErrorCode.UNKNOWN_ERROR, e.getMessage());
-            syncJobProcessorService.markFailed(syncJobContext, syncErrorLog);
+            syncJobStateManager.markFailed(syncJobContext, syncErrorLog);
         } finally {
             heartbeatTask.cancel(true);
         }

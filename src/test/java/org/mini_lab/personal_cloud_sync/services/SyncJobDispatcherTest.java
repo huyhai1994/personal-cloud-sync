@@ -25,7 +25,7 @@ class SyncJobDispatcherTest {
     SyncJobProcessor syncJobProcessor;
 
     @Mock
-    SyncJobProcessorService syncJobProcessorService;
+    SyncJobStateManager syncJobStateManager;
 
     @Test
     void whenExecutorRejectTask_thenMarkSubmitFailed() {
@@ -40,9 +40,9 @@ class SyncJobDispatcherTest {
         syncJobDispatcher.dispatch(syncJobId);
 
         // Assert
-        verify(syncJobProcessorService).markSubmitted(syncJobId);
+        verify(syncJobStateManager).markSubmitted(syncJobId);
         verify(syncJobExecutor).execute(any(Runnable.class));
-        verify(syncJobProcessorService).markSubmitFailed(syncJobId);
+        verify(syncJobStateManager).markSubmitFailed(syncJobId);
         verify(syncJobProcessor, never()).process(any());
     }
 
@@ -63,7 +63,7 @@ class SyncJobDispatcherTest {
         task.run();
 
         verify(syncJobProcessor).process(syncJobId);
-        verify(syncJobProcessorService).markSubmitted(syncJobId);
-        verify(syncJobProcessorService, never()).markSubmitFailed(any());
+        verify(syncJobStateManager).markSubmitted(syncJobId);
+        verify(syncJobStateManager, never()).markSubmitFailed(any());
     }
 }
