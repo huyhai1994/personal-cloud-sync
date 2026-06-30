@@ -60,6 +60,16 @@ class ExceptionControllerAdviceTest {
     }
 
     @Test
+    void handle_conflict_should_return_409(){
+        SyncJobAlreadyActiveException syncJobAlreadyActiveException = new SyncJobAlreadyActiveException();
+        ResponseEntity<ErrorDetail> response =
+                handler.handleConflict(syncJobAlreadyActiveException);
+
+        assertEquals("Sync config already has pending/running or submitted job", Objects.requireNonNull(response.getBody()).getMessage());
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+    }
+
+    @Test
     void handle_internal_server_error_exception_should_return_500() {
         InternalServerException ex = new InternalServerException();
         ResponseEntity<ErrorDetail> response =

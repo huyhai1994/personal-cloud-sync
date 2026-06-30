@@ -20,16 +20,19 @@ public class ExceptionControllerAdvice {
             IllegalArgumentException.class
     })
     public ResponseEntity<ErrorDetail> handleBadRequest(Exception ex) {
+        return badRequest(ex.getMessage());
+    }
+
+    @ExceptionHandler(SyncJobAlreadyActiveException.class)
+    public ResponseEntity<ErrorDetail> handleConflict(Exception ex) {
 
         ErrorDetail errorDetail = new ErrorDetail();
         errorDetail.setMessage(ex.getMessage());
 
-        return ResponseEntity.badRequest().body(errorDetail);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorDetail);
     }
 
-    @ExceptionHandler({
-            SyncConfigNotFoundException.class
-    })
+    @ExceptionHandler(SyncConfigNotFoundException.class)
     public ResponseEntity<ErrorDetail> handleNotFoundRequest(Exception ex) {
         ErrorDetail errorDetail = new ErrorDetail();
         errorDetail.setMessage(ex.getMessage());
@@ -46,7 +49,7 @@ public class ExceptionControllerAdvice {
     public ResponseEntity<ErrorDetail> handleInternalServerException(Exception ex) {
         ErrorDetail errorDetail = new ErrorDetail();
         errorDetail.setMessage(ex.getMessage());
-        return ResponseEntity.status(500).body(errorDetail);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorDetail);
     }
 
     private ResponseEntity<ErrorDetail> badRequest(String message) {
