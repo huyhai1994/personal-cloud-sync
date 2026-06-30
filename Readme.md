@@ -716,9 +716,123 @@ OneDriveRCloneExecutor ..|> IRCloneExecutor
 @enduml
 ```
 ### 6.4 Sequence Flow
+
+```puml
+@startuml  
+  
+|User|  
+start  
+:Call API\nPOST /sync-config/{id}/sync-jobs/manual;  
+  
+|SyncJobController|  
+:createManualSyncJob(syncConfigId);  
+  
+|ManualSyncJobService|  
+:createAndDispatch(syncConfigId);  
+  
+  
+|SyncJobCreationService|  
+:find syncConfig by id;  
+:create pending syncJob;  
+:Create sync_job\nstatus = PENDING;  
+:return persisted syncJob;  
+  
+  
+|ManualSyncJobService|  
+:dispatch sync job ;  
+  
+|SyncJobDispatcher|  
+:dispatch sync job;  
+  
+|SyncJobProcessorService|  
+:update sync job PENDING -> SUBMITTED;  
+  
+|SyncJobDispatcher|  
+  
+fork  
+  |ManualSyncJobService|  
+  :build SyncJobResponse;  
+  :Return SyncJobResponse;  
+  
+  |SyncJobController|  
+  :return SyncJobResponse;  
+  |User|  
+  :Receive syncJobId;  
+  stop  
+fork again  
+  |ExecutorService|  
+  :Run SyncJobTask;  
+  
+  |SyncJobTask|  
+  :run();  
+  
+  |SyncJobProcessor|  
+  :process(syncJobId);  
+  |SyncJobProcessorService|  
+  :Update sync_job SUBMITTED -> RUNNING;  
+  
+  |SyncJobProcessor|  
+  :validate;  
+  
+  |SyncConfigValidator|  
+  :validate sourcePath and targetPath;  
+  |SyncJobProcessor|  
+  :call rCloneExecutor.sync;  
+  |RcloneExecutor|  
+  :Execute rclone sync command;  
+  
+  |SyncJobProcessor|  
+  if (rclone success?) then (yes)  
+    |SyncJobProcessorService|  
+    :Update sync_job RUNNING -> SUCCESS;  
+  else (no)  
+    |SyncJobProcessorService|  
+    :Update sync_job RUNNING -> FAILED;  
+  endif  
+end fork  
+  
+stop  
+@enduml
+```
+
 ### 6.5 Validation Rules
+- Việc kiểm tra cấu hình path đã được tiến hành ở bước tạo Sync Config nên tạm bỏ qua ở flow này.
 ### 6.6 Transaction Boundary
+```java
+@Transactional  
+public SyncJob createPendingJob(Short syncConfigId) {  
+    SyncConfig syncConfig = syncConfigRepository.getSyncConfigByIdAndEnabled(syncConfigId, Boolean.TRUE).orElseThrow(SyncConfigNotFoundException::new);  
+  
+    if (syncJobRepository.existsBySyncConfigIdAndFinalStatusIn(syncConfigId, List.of(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.SUBMITTED))) {  
+        throw new SyncJobAlreadyActiveException();  
+    }  
+  
+    SyncJob syncJob = new SyncJob();  
+    syncJob.setSyncConfig(syncConfig);  
+    syncJob.setFinalStatus(JobStatus.PENDING);  
+  
+    return syncJobRepository.save(syncJob);  
+}
+```
+Transaction boundary bao trùm toàn bộ flow tạo job:
+
+- Lock và load `SyncConfig` đang enabled.
+- Kiểm tra xem `SyncConfig` đó đã có active job chưa.
+- Nếu chưa có active job thì tạo `SyncJob` mới với trạng thái `PENDING`.
+- Persist `SyncJob` xuống bảng `sync_job`.
+
+Điểm quan trọng: thao tác **check active job** và **insert new pending job** phải nằm trong cùng một transaction. Nếu tách ra, hai request đồng thời có thể cùng thấy “chưa có active job” rồi cùng tạo job mới.
 ### 6.7 Concurrency Control / Locking
+Khi tạo `SyncJob`, hệ thống dùng **pessimistic lock trên row `SyncConfig`** tương ứng.
+
+Lý do không lock trực tiếp trên `SyncJob` là tại thời điểm bắt đầu flow, `SyncJob` mới chưa tồn tại. Vì vậy `SyncConfig` được dùng như **coordination lock** cho toàn bộ quá trình tạo job.
+
+Flow concurrency:
+1. Request A lock được `SyncConfig`.
+2. Request B muốn tạo job cho cùng `SyncConfig` sẽ phải chờ.
+3. Request A kiểm tra active job, tạo `PENDING` job và commit.
+4. Request B tiếp tục chạy sau khi A commit, kiểm tra lại active job và thấy job vừa được tạo.
+5. Request B throw `SyncJobAlreadyActiveException`.
 ### 6.8 Query
 
 - Tìm sync config theo id và enabled là true:
@@ -744,18 +858,18 @@ UPDATE OF sc1_0
 
 - Kiểm tra xem active job đã được tạo chưa :
 ```sql
-SELECT CASE WHEN COUNT(sj1_0.id) > 0 THEN TRUE ELSE FALSE END
-FROM personal_sync_db.sync_job sj1_0
-WHERE sj1_0.sync_config_id = 17
-  AND sj1_0.final_status IN ('PENDING', 'RUNNING');
+SELECT CASE WHEN COUNT(sj1_0.id) > 0 THEN TRUE ELSE FALSE END  
+FROM personal_sync_db.sync_job sj1_0  
+WHERE sj1_0.sync_config_id = 17  
+  AND sj1_0.final_status IN ('PENDING', 'RUNNING','SUBMITTED');
 
 ```
 - chuyển trạng thái từ PENDING -> SUBMITTED
 ```sql
-UPDATE personal_sync_db.sync_job sj
-SET sj.final_status = 'SUBMITTED',
-    sj.submitted_at = NOW()
-WHERE sj.id = 17
+UPDATE personal_sync_db.sync_job sj  
+SET sj.final_status = 'SUBMITTED',  
+    sj.submitted_at = NOW()  
+WHERE sj.id = 17  
   AND sj.final_status = 'PENDING';
 ```
 ### 6.9 DB Constraints / Index
@@ -767,4 +881,8 @@ CREATE INDEX idx_sync_config_status
 ```
 > trade-off: "Thêm index để tối ưu việc tìm  active job , đổi lại INSERT phải cập nhật thêm một index."
 ### 6.10 Error Handling
-### 6.11 Test Cases
+
+| Case                                                     |   HTTP Status | Exception                     |
+| -------------------------------------------------------- | ------------: | ----------------------------- |
+| Sync Config not found!                                   | 404 Not Found | SyncConfigNotFoundException   |
+| Sync config already has pending/running or submitted job |  409 Conflict | SyncJobAlreadyActiveException |
