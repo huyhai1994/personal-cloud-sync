@@ -1,5 +1,6 @@
 package org.mini_lab.personal_cloud_sync.services;
 
+import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mini_lab.personal_cloud_sync.configuration.RecoverySchedulerProperties;
@@ -26,6 +27,7 @@ public class SyncJobRecoveryService {
     private final RecoverySchedulerProperties recoverySchedulerProperties;
 
     @Transactional
+    @Timed("")
     public void findAndUpdateTimedOutRunningJobs() {
         List<SyncJob> timedOutRunningJobs =
                 syncJobRepository.findTimedOutRunningJobs(

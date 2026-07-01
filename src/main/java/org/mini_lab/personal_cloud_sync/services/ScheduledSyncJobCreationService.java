@@ -17,13 +17,14 @@ import java.util.Optional;
 @Service
 public class ScheduledSyncJobCreationService {
 
+    public static final List<JobStatus> ACTIVE_JOB_STATUS = List.of(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.SUBMITTED);
     private final SyncJobRepository syncJobRepository;
 
     @Transactional
     public Optional<SyncJob> createPendingJob(SyncConfig syncConfig) {
 
-        if (syncJobRepository.existsBySyncConfigIdAndFinalStatusIn(syncConfig.getId(), List.of(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.SUBMITTED))) {
-            log.info("ACTIVE_JOB_ALREADY_EXISTS_OR_STUCK syncConfigId={}",syncConfig.getId());
+        if (syncJobRepository.existsBySyncConfigIdAndFinalStatusIn(syncConfig.getId(), ACTIVE_JOB_STATUS)) {
+            log.info("ACTIVE_JOB_ALREADY_EXISTS_OR_STUCK syncConfigId={}", syncConfig.getId());
             return Optional.empty();
         }
 

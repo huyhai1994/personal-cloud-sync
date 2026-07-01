@@ -15,10 +15,17 @@ import java.util.List;
 @Getter
 @Setter
 @Table(name = "sync_job",
-        indexes = @Index(
-                name = "idx_sync_config_status",
-                columnList = "sync_config_id, final_status"
-        ))
+        indexes = {
+                @Index(
+                        name = "idx_sync_config_status",
+                        columnList = "sync_config_id, final_status"
+                ),
+                @Index(
+                        name = "idx_final_status_heartbeat_at",
+                        columnList = "final_status,heartbeat_at"
+                ),
+        }
+)
 public class SyncJob {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,5 +1,6 @@
 package org.mini_lab.personal_cloud_sync.scheduler;
 
+import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mini_lab.personal_cloud_sync.services.SyncJobRecoveryService;
@@ -17,6 +18,10 @@ public class RecoveryScheduler {
     @Scheduled(
             fixedRateString = "${recovery-scheduler.running-interval}",
             timeUnit = TimeUnit.SECONDS
+    )
+    @Timed(
+            value = "recovery.scheduler.recover.timed.out.running.jobs",
+            description = "Time taken to recover timed out running jobs"
     )
     public void recoverTimedOutRunningJobs() {
         syncJobRecoveryService.findAndUpdateTimedOutRunningJobs();
