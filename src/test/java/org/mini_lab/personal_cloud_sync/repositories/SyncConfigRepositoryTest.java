@@ -1,6 +1,5 @@
 package org.mini_lab.personal_cloud_sync.repositories;
 
-import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -15,11 +14,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
 import java.nio.file.Path;
-import java.time.*;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.IntStream;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -43,148 +43,181 @@ class SyncConfigRepositoryTest extends AbstractIntegrationTest {
     @TempDir
     Path targetPath;
 
-    @Autowired
-    EntityManager entityManager;
+    private String source(String name) {
+        return sourcePath.resolve(name).toString();
+    }
 
+    private String target(String name) {
+        return targetPath.resolve(name).toString();
+    }
 
     @Test
     void persist_sync_config_should_success() {
         SyncConfig syncConfig = new SyncConfig();
+        syncConfig.setSourcePath(source("persist-source"));
+        syncConfig.setTargetPath(target("persist-target"));
 
-        syncConfig.setSourcePath(sourcePath.toString());
-        syncConfig.setTargetPath(targetPath.toString());
-        SyncConfig syncConfig1 = syncConfigRepository.saveAndFlush(syncConfig);
-        assertNotNull(syncConfig1.getId());
+        SyncConfig persistedSyncConfig = syncConfigRepository.saveAndFlush(syncConfig);
+
+        assertNotNull(persistedSyncConfig.getId());
     }
 
     @Test
     void persist_invalid_sync_config_should_throw_exception() {
         SyncConfig syncConfig = new SyncConfig();
-        assertThrows(DataIntegrityViolationException.class, () -> syncConfigRepository.saveAndFlush(syncConfig));
+
+        assertThrows(
+                DataIntegrityViolationException.class,
+                () -> syncConfigRepository.saveAndFlush(syncConfig)
+        );
     }
 
     @Test
     void persist_sync_config_created_at_auto_generated() {
         SyncConfig syncConfig = new SyncConfig();
-        syncConfig.setSourcePath(sourcePath.toString());
-        syncConfig.setTargetPath(targetPath.toString());
-        SyncConfig syncConfig1 = syncConfigRepository.saveAndFlush(syncConfig);
-        assertNotNull(syncConfig1.getCreatedAt());
+        syncConfig.setSourcePath(source("created-at-source"));
+        syncConfig.setTargetPath(target("created-at-target"));
+
+        SyncConfig persistedSyncConfig = syncConfigRepository.saveAndFlush(syncConfig);
+
+        assertNotNull(persistedSyncConfig.getCreatedAt());
     }
 
     @Test
     void source_path_and_target_path_should_be_unique() {
-        SyncConfig enabledConfig1 = new SyncConfig();
-        enabledConfig1.setSourcePath("/source/test/1");
-        enabledConfig1.setTargetPath("/target/test/1");
+        String duplicatedSourcePath = source("duplicated-source");
+        String duplicatedTargetPath = target("duplicated-target");
 
-        SyncConfig enabledConfig2 = new SyncConfig();
-        enabledConfig2.setEnabled(false);
-        enabledConfig2.setSourcePath("/source/test/1");
-        enabledConfig2.setTargetPath("/target/test/1");
-        syncConfigRepository.saveAndFlush(enabledConfig1);
+        SyncConfig enabledConfig = new SyncConfig();
+        enabledConfig.setSourcePath(duplicatedSourcePath);
+        enabledConfig.setTargetPath(duplicatedTargetPath);
 
-        assertThrows(DataIntegrityViolationException.class, () -> syncConfigRepository.saveAndFlush(enabledConfig2));
+        SyncConfig disabledConfig = new SyncConfig();
+        disabledConfig.setEnabled(false);
+        disabledConfig.setSourcePath(duplicatedSourcePath);
+        disabledConfig.setTargetPath(duplicatedTargetPath);
 
+        syncConfigRepository.saveAndFlush(enabledConfig);
 
+        assertThrows(
+                DataIntegrityViolationException.class,
+                () -> syncConfigRepository.saveAndFlush(disabledConfig)
+        );
     }
 
     @Test
     void get_sync_config_by_enabled_should_return_only_enabled_configs() {
-
         SyncConfig enabledConfig = new SyncConfig();
-        enabledConfig.setSourcePath(sourcePath.toString());
-        enabledConfig.setTargetPath(targetPath.toString());
+        enabledConfig.setSourcePath(source("enabled-source"));
+        enabledConfig.setTargetPath(target("enabled-target"));
 
         SyncConfig disabledConfig = new SyncConfig();
         disabledConfig.setEnabled(false);
-        disabledConfig.setSourcePath("/source/test/disabled");
-        disabledConfig.setTargetPath("/target/test/disabled");
+        disabledConfig.setSourcePath(source("disabled-source"));
+        disabledConfig.setTargetPath(target("disabled-target"));
 
         syncConfigRepository.saveAndFlush(enabledConfig);
         syncConfigRepository.saveAndFlush(disabledConfig);
 
-        List<SyncConfig> result;
-        result = syncConfigRepository.getSyncConfigByEnabled(
+        List<SyncConfig> result = syncConfigRepository.getSyncConfigByEnabled(
                 true,
                 PageRequest.of(0, 10)
         );
 
         assertEquals(1, result.size());
         assertTrue(result.get(0).getEnabled());
-
     }
 
     @Test
     void get_sync_config_by_enabled_should_apply_pagination() {
-
         SyncConfig enabledConfig1 = new SyncConfig();
-        enabledConfig1.setSourcePath("/source/test/1");
-        enabledConfig1.setTargetPath("/target/test/1");
+        enabledConfig1.setSourcePath(source("enabled-source-1"));
+        enabledConfig1.setTargetPath(target("enabled-target-1"));
 
         SyncConfig enabledConfig2 = new SyncConfig();
-        enabledConfig2.setEnabled(false);
-        enabledConfig2.setSourcePath("/source/test/2");
-        enabledConfig2.setTargetPath("/target/test/2");
+        enabledConfig2.setSourcePath(source("enabled-source-2"));
+        enabledConfig2.setTargetPath(target("enabled-target-2"));
 
         syncConfigRepository.saveAndFlush(enabledConfig1);
         syncConfigRepository.saveAndFlush(enabledConfig2);
 
-        List<SyncConfig> result;
-        result = syncConfigRepository.getSyncConfigByEnabled(
+        List<SyncConfig> result = syncConfigRepository.getSyncConfigByEnabled(
                 true,
                 PageRequest.of(0, 1)
         );
 
         assertEquals(1, result.size());
         assertTrue(result.get(0).getEnabled());
-
     }
 
     @Test
     void find_sync_config_by_id() {
         SyncConfig initialSyncConfig = new SyncConfig();
-        initialSyncConfig.setSourcePath("/source/test/1");
-        initialSyncConfig.setTargetPath("/target/test/1");
+        initialSyncConfig.setSourcePath(source("find-by-id-source"));
+        initialSyncConfig.setTargetPath(target("find-by-id-target"));
         initialSyncConfig.setEnabled(Boolean.FALSE);
 
-        SyncConfig needFoundSyncConfig = syncConfigRepository.saveAndFlush(initialSyncConfig);
-        Short id = needFoundSyncConfig.getId();
-        Optional<SyncConfig> foundSyncConfig = syncConfigRepository.findById(id);
+        SyncConfig persistedSyncConfig = syncConfigRepository.saveAndFlush(initialSyncConfig);
+
+        Optional<SyncConfig> foundSyncConfig = syncConfigRepository.findById(
+                persistedSyncConfig.getId()
+        );
+
         assertFalse(foundSyncConfig.orElseThrow().getEnabled());
     }
 
     @Test
     void when_save_source_path_and_target_path_exist_should_return_true() {
+        String existingSourcePath = source("existing-source");
+        String existingTargetPath = target("existing-target");
+
         SyncConfig initialSyncConfig = new SyncConfig();
-        initialSyncConfig.setSourcePath("/source/test/");
-        initialSyncConfig.setTargetPath("/target/test/");
+        initialSyncConfig.setSourcePath(existingSourcePath);
+        initialSyncConfig.setTargetPath(existingTargetPath);
+
         syncConfigRepository.saveAndFlush(initialSyncConfig);
-        assertTrue(syncConfigRepository.existsSyncConfigBySourcePathAndTargetPath("/source/test/", "/target/test/"));
+
+        assertTrue(
+                syncConfigRepository.existsSyncConfigBySourcePathAndTargetPath(
+                        existingSourcePath,
+                        existingTargetPath
+                )
+        );
     }
 
     @Test
     void getSyncConfigByIdAndEnabled_whenSyncConfigExist_shouldReturnMatchingSyncConfig() {
         SyncConfig initialSyncConfig = new SyncConfig();
-        initialSyncConfig.setSourcePath("/source/test/");
-        initialSyncConfig.setTargetPath("/target/test/");
+        initialSyncConfig.setSourcePath(source("get-by-id-enabled-source"));
+        initialSyncConfig.setTargetPath(target("get-by-id-enabled-target"));
+
         SyncConfig persistedSyncConfig = syncConfigRepository.saveAndFlush(initialSyncConfig);
-        Optional<SyncConfig> syncConfigByIdAndEnabled = syncConfigRepository.getSyncConfigByIdAndEnabled(persistedSyncConfig.getId(), Boolean.TRUE);
+
+        Optional<SyncConfig> syncConfigByIdAndEnabled =
+                syncConfigRepository.getSyncConfigByIdAndEnabled(
+                        persistedSyncConfig.getId(),
+                        Boolean.TRUE
+                );
+
         assertEquals(Boolean.TRUE, syncConfigByIdAndEnabled.orElseThrow().getEnabled());
     }
 
     @Test
     void getSyncConfigByIdAndEnabled_whenSyncConfigNotExist_shouldReturnEmpty() {
-        Optional<SyncConfig> syncConfigByIdAndEnabled = syncConfigRepository.getSyncConfigByIdAndEnabled((short) 100, Boolean.TRUE);
+        Optional<SyncConfig> syncConfigByIdAndEnabled =
+                syncConfigRepository.getSyncConfigByIdAndEnabled(
+                        (short) 100,
+                        Boolean.TRUE
+                );
+
         assertEquals(Optional.empty(), syncConfigByIdAndEnabled);
     }
 
     @Test
     void findDueSyncConfigs_shouldReturnOnlyDueAndNonManualConfigs() {
-
         SyncConfig dueConfig = new SyncConfig();
-        dueConfig.setSourcePath("/source/test1");
-        dueConfig.setTargetPath("/target/test1");
+        dueConfig.setSourcePath(source("due-source"));
+        dueConfig.setTargetPath(target("due-target"));
         dueConfig.setScheduleType(ScheduleType.INTERVAL);
         dueConfig.setScheduleInterval((short) 30);
         dueConfig.setNextScheduledAt(
@@ -192,12 +225,12 @@ class SyncConfigRepositoryTest extends AbstractIntegrationTest {
         );
 
         SyncConfig manualConfig = new SyncConfig();
-        manualConfig.setSourcePath("/source/test2");
-        manualConfig.setTargetPath("/target/test2");
+        manualConfig.setSourcePath(source("manual-source"));
+        manualConfig.setTargetPath(target("manual-target"));
         manualConfig.setScheduleType(ScheduleType.MANUAL);
 
-        syncConfigRepository.save(dueConfig);
-        syncConfigRepository.save(manualConfig);
+        syncConfigRepository.saveAndFlush(dueConfig);
+        syncConfigRepository.saveAndFlush(manualConfig);
 
         List<SyncConfig> result =
                 syncConfigRepository.findDueNonManualScheduleTypeSyncConfigs(
@@ -210,64 +243,8 @@ class SyncConfigRepositoryTest extends AbstractIntegrationTest {
                         )
                 );
 
+        assertEquals(1, result.size());
         assertThat(result.get(0).getScheduleType())
                 .isEqualTo(ScheduleType.INTERVAL);
     }
-
-//    @Test
-//    void should_measure_find_due_configs_performance() {
-//        int totalConfigs = 10_000;
-//        int batchSize = 10;
-//        OffsetDateTime dueTime = OffsetDateTime.now(fixedClock).minusMinutes(1);
-//
-//        List<SyncConfig> syncConfigs = IntStream.range(0, totalConfigs)
-//                .mapToObj(i -> {
-//                    SyncConfig syncConfig = new SyncConfig();
-//                    syncConfig.setSourcePath(sourcePath.resolve("source" + i).toString());
-//                    syncConfig.setTargetPath(targetPath.resolve("target" + i).toString());
-//                    syncConfig.setScheduleType(i % 5 == 0 ? ScheduleType.MANUAL : ScheduleType.INTERVAL);
-//                    syncConfig.setScheduleInterval(i % 5 == 0 ? null : (short) 10);
-//                    syncConfig.setEnabled(i % 3 != 0);
-//                    syncConfig.setNextScheduledAt(i % 4 == 0 ? dueTime : dueTime.plusDays(1));
-//                    syncConfig.setEnabled(true);
-//                    return syncConfig;
-//                })
-//                .toList();
-//        syncConfigRepository.saveAll(syncConfigs);
-//        entityManager.flush();
-//        entityManager.clear();
-//
-//        // warm up
-//        syncConfigRepository.findDueNonManualScheduleTypeSyncConfigs(
-//                ScheduleType.MANUAL,
-//                OffsetDateTime.now(fixedClock),
-//                PageRequest.of(
-//                        0,
-//                        batchSize,
-//                        Sort.by("nextScheduledAt").ascending()
-//                )
-//        );
-//
-//        // when
-//        long start = System.nanoTime();
-//
-//        List<SyncConfig> result =
-//                syncConfigRepository.findDueNonManualScheduleTypeSyncConfigs(
-//                        ScheduleType.MANUAL,
-//                        OffsetDateTime.now(fixedClock),
-//                        PageRequest.of(
-//                                0,
-//                                batchSize,
-//                                Sort.by("nextScheduledAt").ascending()
-//                        )
-//                );
-//
-//        long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
-//
-//        // then
-//        log.info("FIND_DUE_SYNC_CONFIGS_PERFORMANCE totalConfigs={} foundConfigs={} durationMs={}",
-//                totalConfigs,
-//                result.size(),
-//                durationMs);
-//    }
 }
