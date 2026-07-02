@@ -7,8 +7,9 @@ import org.mini_lab.personal_cloud_sync.configuration.RecoverySchedulerPropertie
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
 import org.mini_lab.personal_cloud_sync.enums.SyncErrorCode;
-import org.mini_lab.personal_cloud_sync.repositories.SyncAttemptRepository;
 import org.mini_lab.personal_cloud_sync.repositories.SyncJobRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,23 +28,42 @@ public class SyncJobRecoveryService {
     private final RecoverySchedulerProperties recoverySchedulerProperties;
 
     @Transactional
-    @Timed("")
-    public void findAndUpdateTimedOutRunningJobs() {
-        List<SyncJob> timedOutRunningJobs =
-                syncJobRepository.findTimedOutRunningJobs(
-                        JobStatus.RUNNING,
-                        OffsetDateTime.now(systemClock).minusMinutes(recoverySchedulerProperties.getRunningJobTimedOutLimit())
-                );
+    @Timed("sync.job.recovery.service.update.timed.out.running.job")
+    public void updateTimedOutRunningJob(Integer jobId) {
+        OffsetDateTime markFailedTime = OffsetDateTime.now(systemClock);
 
-        timedOutRunningJobs.forEach(job -> {
-            job.setFinalStatus(JobStatus.FAILED);
-            log.info("RECOVER_STUCK_RUNNING_JOB syncJobId={}",job.getId());
-            job.getSyncAttempts().forEach(attempt -> {
-                attempt.setAttemptStatus(JobStatus.FAILED);
-                attempt.setErrorCode(SyncErrorCode.RECOVERY_TIMEOUT);
-                attempt.setErrorMessage("Stuck running job was marked as FAILED by recovery scheduler");
-                attempt.setFinishedAt(OffsetDateTime.now(systemClock));
-            });
+        int updatedRows = syncJobRepository.markFailedIfRunning(
+                jobId,
+                JobStatus.FAILED,
+                JobStatus.RUNNING,
+                markFailedTime
+        );
+
+        if (updatedRows == 0) {
+            log.info("SKIP_RECOVER_STUCK_RUNNING_JOB syncJobId={} reason=status_changed", jobId);
+            return;
+        }
+
+        SyncJob job = syncJobRepository.getSyncJobById(jobId).orElseThrow();
+
+        log.info("RECOVER_STUCK_RUNNING_JOB syncJobId={}", job.getId());
+
+        job.getSyncAttempts().forEach(attempt -> {
+            attempt.setAttemptStatus(JobStatus.FAILED);
+            attempt.setErrorCode(SyncErrorCode.RECOVERY_TIMEOUT);
+            attempt.setErrorMessage("Stuck running job was marked as FAILED by recovery scheduler");
+            attempt.setFinishedAt(markFailedTime);
         });
+    }
+
+    @Transactional(readOnly = true)
+    public List<Integer> findTimedOutRunningJobs() {
+        return syncJobRepository.findTimedOutRunningJobs(
+                JobStatus.RUNNING,
+                OffsetDateTime.now(systemClock).minusMinutes(recoverySchedulerProperties.getRunningJobTimedOutLimit()),
+                PageRequest.of(0, 10,
+                        Sort.by("heartBeatAt")
+                                .ascending())
+        );
     }
 }

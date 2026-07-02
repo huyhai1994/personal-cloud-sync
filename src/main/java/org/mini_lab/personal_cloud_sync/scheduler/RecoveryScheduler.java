@@ -8,6 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
+import java.util.List;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -24,6 +25,7 @@ public class RecoveryScheduler {
             description = "Time taken to recover timed out running jobs"
     )
     public void recoverTimedOutRunningJobs() {
-        syncJobRecoveryService.findAndUpdateTimedOutRunningJobs();
+        List<Integer> jobIds = syncJobRecoveryService.findTimedOutRunningJobs();
+        jobIds.forEach(syncJobRecoveryService::updateTimedOutRunningJob);
     }
 }
