@@ -1243,14 +1243,170 @@ Mặc dù thử nghiệm cho thấy sử dụng `schedule_type IN ('DAILY', 'INT
 ## 8 Feature: Recovery Scheduler
 
 ### 8.1 Responsibility
--  
-### 8.2 API / Entry Point
-### 8.3 Class Diagram
-### 8.4 Sequence Flow
-### 8.5 Validation Rules
-### 8.6 Transaction Boundary
-### 8.7 Concurrency Control / Locking
-### 8.8 DB Constraints / Index
-### 8.9 Query
-### 8.10 Error Handling
-### 8.11 Test Cases
+-   Recovery các active job bị kẹt.
+### 8.2 Class Diagram
+
+```plantuml
+@startuml  
+'https://plantuml.com/class-diagram  
+  
+class RecoveryScheduler{  
+    +recoverTimedOutRunningJobs()  
+}  
+  
+class SyncJobRecoveryService {  
+   +findAndUpdateTimedOutRunningJobs()  
+}  
+  
+interface SyncJobRepository{  
+  +findTimedOutRunningJobs(jobStatus: JobStatus, cutOffTime: OffsetDateTime)  
+}  
+  
+class Clock  
+class RecoverySchedulerProperties  
+  
+enum JobStatus {  
+    PENDING  
+    SUBMITTED  
+    SUBMIT_FAILED  
+    RUNNING  
+    SUCCESS  
+    FAILED  
+    RETRYING  
+}  
+  
+RecoveryScheduler --> SyncJobRecoveryService : invokes  
+  
+SyncJobRecoveryService --> SyncJobRepository : queries  
+SyncJobRecoveryService --> Clock : reads current time  
+SyncJobRecoveryService --> RecoverySchedulerProperties : reads timeout  
+  
+SyncJobRepository ..> JobStatus : depends on  
+  
+@enduml
+```
+### 8.3 Sequence Flow
+
+```plantuml
+@startuml  
+autonumber  
+  
+participant "RecoveryScheduler" as rs  
+participant "SyncJobRecoveryService" as sjrs  
+participant "SyncJobRepository" as sjr  
+database "MySQL" as db  
+  
+loop Every 30 seconds  
+    rs -> sjrs: recoverTimedOutRunningJobs()  
+  
+    sjrs -> sjr: findTimedOutRunningJobs()  
+    sjr -> db: SELECT *\nFROM sync_job\nWHERE status='RUNNING'\nAND updated_at < now() - 15 minutes  
+    db --> sjr: timed out jobs  
+    sjr --> sjrs: jobs  
+  
+    alt timed out jobs found  
+  
+        loop for each job  
+            sjrs -> sjrs: mark FAILED\nerrorCode=JOB_TIMEOUT  
+  
+        end  
+  
+        sjrs -> sjr: saveAll(updatedJobs)  
+        sjr -> db: UPDATE sync_job\nSET status='FAILED'  
+        db --> sjr: OK  
+        sjr --> sjrs: OK  
+  
+    else no timed out jobs  
+        sjrs --> rs: nothing to recover  
+    end  
+  
+end  
+  
+@enduml
+```
+### 8.4 Transaction Boundary
+```java
+@Transactional  
+public void findAndUpdateTimedOutRunningJobs() {  
+    List<SyncJob> timedOutRunningJobs =  
+            syncJobRepository.findTimedOutRunningJobs(  
+                    JobStatus.RUNNING,  
+                    OffsetDateTime.now(systemClock).minusMinutes(recoverySchedulerProperties.getRunningJobTimedOutLimit())  
+            );  
+  
+    timedOutRunningJobs.forEach(job -> {  
+        job.setFinalStatus(JobStatus.FAILED);  
+        log.info("RECOVER_STUCK_RUNNING_JOB syncJobId={}",job.getId());  
+        job.getSyncAttempts().forEach(attempt -> {  
+            attempt.setAttemptStatus(JobStatus.FAILED);  
+            attempt.setErrorCode(SyncErrorCode.RECOVERY_TIMEOUT);  
+            attempt.setErrorMessage("Stuck running job was marked as FAILED by recovery scheduler");  
+            attempt.setFinishedAt(OffsetDateTime.now(systemClock));  
+        });  
+    });  
+}
+```
+### 8.5 Concurrency Control / Locking
+### 8.6 DB Constraints / Index
+- Recovery scheduler dùng composite index `(final_status, heartbeat_at)` vì bảng `sync_job` tăng trưởng theo thời gian. Execution plan trước index phải full table scan ~45k rows, sau index chuyển sang index range scan với cost giảm từ ~4280 xuống ~0.71.
+### 8.7 Query
+#### 8.7.1 Find Timed Out Running Job
+
+```sql
+SELECT sj1_0.id,  
+       sj1_0.created_at,  
+       sj1_0.final_status,  
+       sj1_0.finished_at,  
+       sj1_0.heartbeat_at,  
+       sj1_0.retry_count,  
+       sj1_0.start_at,  
+       sj1_0.submit_failed_at,  
+       sj1_0.submitted_at,  
+       sa1_0.sync_job_id,  
+       sa1_0.id,  
+       sa1_0.attempt_no,  
+       sa1_0.attempt_status,  
+       sa1_0.error_code,  
+       sa1_0.error_message,  
+       sa1_0.finished_at,  
+       sa1_0.process_exit_code,  
+       sa1_0.start_at,  
+       sj1_0.sync_config_id,  
+       sj1_0.updated_at  
+FROM sync_job sj1_0  
+         LEFT JOIN sync_attempt sa1_0 ON sj1_0.id = sa1_0.sync_job_id  
+WHERE sj1_0.final_status = 'RUNNING'  
+  AND sj1_0.heartbeat_at < NOW() - INTERVAL 30 MINUTE FOR  
+UPDATE OF sj1_0;
+
+
+```
+
+- Recovery Scheduler cần fetch `syncAttempts` cùng `SyncJob` vì recovery không chỉ cập nhật trạng thái job, mà còn cập nhật trạng thái/error của các attempt liên quan. Để tránh N+1 khi duyệt `job.getSyncAttempts()`, repository dùng `@EntityGraph(attributePaths = "syncAttempts")`.
+
+```java
+
+@EntityGraph(attributePaths = "syncAttempts")   
+List<SyncJob> findTimedOutRunningJobs(  
+        @Param("jobStatus") JobStatus jobStatus,  
+        @Param("cutOffTime") OffsetDateTime cutOffTime);
+```
+- Recovery scheduler xử lý theo batch để giới hạn thời gian giữ transaction/lock và tránh load quá nhiều `SyncJob` + `SyncAttempt` vào Persistence Context trong một lần chạy.
+### 8.8 Error Handling
+### 8.9 Test Cases
+
+
+## 9 Troubleshooting
+### 9.1 CannotAcquireLockException
+
+1. Xem stacktrace để xác định query bị lock.
+2. Chạy `SHOW ENGINE INNODB STATUS;`.
+3. Kiểm tra transaction đang `LOCK WAIT`.
+4. Xác định transaction giữ lock (`ACTIVE xxx sec`).
+5. Chạy `SHOW FULL PROCESSLIST;` hoặc `information_schema.innodb_trx`.
+6. Nếu là session test (DataGrip/Workbench), commit/rollback hoặc `KILL` session.
+7. Nếu là transaction của ứng dụng:
+  - kiểm tra transaction boundary,
+  - kiểm tra thời gian giữ lock,
+  - kiểm tra batch size,
+  - kiểm tra index của query `FOR UPDATE`.
