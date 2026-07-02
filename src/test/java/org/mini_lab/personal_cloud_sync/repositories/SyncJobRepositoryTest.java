@@ -5,6 +5,7 @@ import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mini_lab.personal_cloud_sync.entities.SyncAttempt;
 import org.mini_lab.personal_cloud_sync.entities.SyncConfig;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
@@ -15,6 +16,8 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.nio.file.Path;
 import java.time.Clock;
@@ -52,6 +55,8 @@ class SyncJobRepositoryTest extends AbstractIntegrationTest {
             Instant.parse("2026-06-23T10:00:00Z"),
             ZoneOffset.UTC
     );
+    @Autowired
+    private SyncAttemptRepository syncAttemptRepository;
 
     @Test
     void saveSyncJob_missingFinalStatus_shouldThrow() {
@@ -176,13 +181,38 @@ class SyncJobRepositoryTest extends AbstractIntegrationTest {
         entityManager.flush();
         entityManager.clear();
 
-        List<SyncJob> timedOutRunningJobs =
+        List<Integer> timedOutRunningJobs =
                 syncJobRepository.findTimedOutRunningJobs(
                         JobStatus.RUNNING,
-                        OffsetDateTime.now(currentTime).minusMinutes(15L)
+                        OffsetDateTime.now(currentTime).minusMinutes(15L),
+                        PageRequest.of(0, 10, Sort.by("heartBeatAt").descending())
                 );
 
         assertEquals(1, timedOutRunningJobs.size());
+    }
+
+    @Test
+    void findAllByIdIn_shouldReturnSyncJobsWithSyncAttempts() {
+        SyncConfig syncConfig1 = saveSyncConfig("test1");
+        SyncConfig syncConfig2 = saveSyncConfig("test2");
+        SyncJob syncJob1 = syncJobRepository.saveAndFlush(buildSyncJob(syncConfig1, JobStatus.RUNNING));
+        SyncJob syncJob2 = syncJobRepository.saveAndFlush(buildSyncJob(syncConfig2, JobStatus.RUNNING));
+        Integer id1 = syncJob1.getId();
+        Integer id2 = syncJob2.getId();
+        syncAttemptRepository.saveAndFlush(buildSyncAttempt(syncJob1));
+        syncAttemptRepository.saveAndFlush(buildSyncAttempt(syncJob2));
+
+        entityManager.flush();
+        entityManager.clear();
+
+        List<SyncJob> persistedSyncJob = syncJobRepository.findAllByIdIn(List.of(id1, id2));
+
+        assertEquals(2, persistedSyncJob.size());
+        persistedSyncJob.forEach(job -> {
+            assertNotNull(job);
+            assertNotNull(job.getSyncAttempts());
+        });
+
     }
 
     @Test
@@ -383,5 +413,13 @@ class SyncJobRepositoryTest extends AbstractIntegrationTest {
         syncJob.setSyncConfig(syncConfig);
         syncJob.setFinalStatus(finalStatus);
         return syncJob;
+    }
+
+    private SyncAttempt buildSyncAttempt(SyncJob syncJob) {
+        SyncAttempt syncAttempt = new SyncAttempt();
+        syncAttempt.setSyncJob(syncJob);
+        syncAttempt.setAttemptStatus(JobStatus.RUNNING);
+        syncAttempt.setStartAt(OffsetDateTime.now(currentTime));
+        return syncAttempt;
     }
 }

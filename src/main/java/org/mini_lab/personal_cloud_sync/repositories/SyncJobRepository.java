@@ -1,7 +1,6 @@
 package org.mini_lab.personal_cloud_sync.repositories;
 
 import io.micrometer.core.annotation.Timed;
-import jakarta.persistence.LockModeType;
 import org.mini_lab.personal_cloud_sync.entities.SyncJob;
 import org.mini_lab.personal_cloud_sync.enums.JobStatus;
 import org.springframework.data.domain.Pageable;
@@ -14,26 +13,28 @@ import java.util.Optional;
 
 public interface SyncJobRepository extends JpaRepository<SyncJob, Integer> {
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-            SELECT sj from SyncJob as sj
+            SELECT sj.id from SyncJob as sj
                     where sj.finalStatus = :jobStatus
                     and sj.heartBeatAt < :cutOffTime
             """
     )
-    @EntityGraph(attributePaths = "syncAttempts")
     @Timed(
             value = "sync.job.repository.find_timed_out_running_jobs",
             description = "Time taken to find timed out running jobs"
     )
-    List<SyncJob> findTimedOutRunningJobs(
+    List<Integer> findTimedOutRunningJobs(
             @Param("jobStatus") JobStatus jobStatus,
-            @Param("cutOffTime") OffsetDateTime cutOffTime);
+            @Param("cutOffTime") OffsetDateTime cutOffTime,
+            Pageable pageable);
 
     List<SyncJob> getAllByFinalStatus(JobStatus jobStatus, Pageable pageable);
 
     @EntityGraph(attributePaths = "syncConfig")
     Optional<SyncJob> getSyncJobById(Integer id);
+
+    @EntityGraph(attributePaths = "syncAttempts")
+    List<SyncJob> findAllByIdIn(List<Integer> id);
 
     @Query("""
             select

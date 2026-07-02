@@ -24,6 +24,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -80,7 +81,9 @@ class SyncJobRecoveryServiceIntegrationTest extends AbstractIntegrationTest {
                 )
         );
 
-        syncJobRecoveryService.findAndUpdateTimedOutRunningJobs();
+        syncJobRecoveryService.findTimedOutRunningJobs().forEach(id ->
+                syncJobRecoveryService.updateTimedOutRunningJob(id)
+        );
 
         SyncJob recoveredJob =
                 syncJobRepository.findById(runningJob.getId()).orElseThrow();
@@ -91,10 +94,10 @@ class SyncJobRecoveryServiceIntegrationTest extends AbstractIntegrationTest {
         assertAll(
                 () -> assertEquals(JobStatus.FAILED, recoveredJob.getFinalStatus()),
                 () -> assertEquals(JobStatus.FAILED, recoveredAttempt.getAttemptStatus()),
-                () -> assertEquals(SyncErrorCode.RECOVERY_TIMEOUT, recoveredAttempt.getErrorCode()),
-                () -> assertNotNull(recoveredAttempt.getErrorMessage())
+                () -> assertEquals(SyncErrorCode.RECOVERY_TIMEOUT, recoveredAttempt.getErrorCode()), () -> assertNotNull(recoveredAttempt.getErrorMessage())
         );
     }
+
     @Test
     void recoverTimedOutRunningJobs_shouldNotRecoverRunningJob_whenJobIsNotTimedOut() {
         SyncConfig syncConfig = saveSyncConfig("not-timeout");
@@ -108,7 +111,9 @@ class SyncJobRecoveryServiceIntegrationTest extends AbstractIntegrationTest {
                 )
         );
 
-        syncJobRecoveryService.findAndUpdateTimedOutRunningJobs();
+        syncJobRecoveryService.findTimedOutRunningJobs().forEach(id ->
+                syncJobRecoveryService.updateTimedOutRunningJob(id)
+        );
 
         SyncJob job = syncJobRepository.findById(runningJob.getId()).orElseThrow();
         SyncAttempt attempt = syncAttemptRepository.findById(runningAttempt.getId()).orElseThrow();
@@ -124,6 +129,7 @@ class SyncJobRecoveryServiceIntegrationTest extends AbstractIntegrationTest {
         SyncConfig syncConfig = saveSyncConfig("final-status");
 
         SyncJob successJob = saveSyncJob(syncConfig, JobStatus.SUCCESS);
+
         SyncJob failedJob = saveSyncJob(syncConfig, JobStatus.FAILED);
 
         transactionTemplate.executeWithoutResult(status -> {
@@ -137,7 +143,9 @@ class SyncJobRecoveryServiceIntegrationTest extends AbstractIntegrationTest {
             );
         });
 
-        syncJobRecoveryService.findAndUpdateTimedOutRunningJobs();
+        syncJobRecoveryService.findTimedOutRunningJobs().forEach(id ->
+                syncJobRecoveryService.updateTimedOutRunningJob(id)
+        );
 
         SyncJob foundSuccessJob = syncJobRepository.findById(successJob.getId()).orElseThrow();
         SyncJob foundFailedJob = syncJobRepository.findById(failedJob.getId()).orElseThrow();
@@ -147,6 +155,7 @@ class SyncJobRecoveryServiceIntegrationTest extends AbstractIntegrationTest {
                 () -> assertEquals(JobStatus.FAILED, foundFailedJob.getFinalStatus())
         );
     }
+
 
     private SyncConfig saveSyncConfig(String suffix) {
         SyncConfig syncConfig = new SyncConfig();
